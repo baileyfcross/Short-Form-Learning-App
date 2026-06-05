@@ -1,0 +1,40 @@
+import { libraryService } from "../services/libraryService.js";
+import { asyncHandler } from "../middleware/asyncHandler.js";
+import { isAdmin } from "../middleware/roles.js";
+
+const parseTags = (value: unknown) => {
+  if (Array.isArray(value)) return value.map(String);
+  if (typeof value === "string") return value.split(",").map((tag) => tag.trim()).filter(Boolean);
+  return [];
+};
+
+export const listLibrary = asyncHandler(async (req, res) => {
+  res.json(await libraryService.list(req.user!.id));
+});
+
+export const uploadMaterial = asyncHandler(async (req, res) => {
+  res.status(201).json(
+    await libraryService.upload({
+      userId: req.user!.id,
+      file: req.file!,
+      title: String(req.body.title ?? req.file?.originalname ?? "Untitled"),
+      description: req.body.description ? String(req.body.description) : undefined,
+      subject: String(req.body.subject ?? "General"),
+      tags: parseTags(req.body.tags),
+      isPublic: req.body.isPublic === "true" || req.body.isPublic === true
+    })
+  );
+});
+
+export const getMaterial = asyncHandler(async (req, res) => {
+  res.json(await libraryService.get(req.params.id, req.user!.id, isAdmin(req)));
+});
+
+export const patchMaterial = asyncHandler(async (req, res) => {
+  res.json(await libraryService.patch(req.params.id, req.user!.id, req.body));
+});
+
+export const deleteMaterial = asyncHandler(async (req, res) => {
+  await libraryService.remove(req.params.id, req.user!.id, isAdmin(req));
+  res.status(204).send();
+});
