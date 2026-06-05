@@ -1,4 +1,4 @@
-import { Upload } from "lucide-react";
+import { Globe2, Lock, Upload } from "lucide-react";
 import { useRef, useState } from "react";
 import type { UploadInspection } from "@shortlearn/shared";
 
@@ -144,9 +144,19 @@ export const UploadPage = ({ onUpload, onInspect }: UploadPageProps) => {
           <input name="tags" value={tags} onChange={(event) => setTags(normalizeTags(event.target.value))} placeholder="biology, cells, foundations" />
           <span className="field-hint">{tags.split(",").map((tag) => tag.trim()).filter(Boolean).length} / 20 comma-separated terms</span>
         </label>
-        <label className="checkbox-row">
-          <input type="checkbox" checked={isPublic} onChange={(event) => setIsPublic(event.target.checked)} />
-          Generate public snippet candidates
+        <label>
+          Visibility
+          <div className="visibility-control">
+            <button className={!isPublic ? "active" : ""} type="button" aria-pressed={!isPublic} onClick={() => setIsPublic(false)}>
+              <Lock aria-hidden="true" />
+              <span>Private</span>
+            </button>
+            <button className={isPublic ? "active" : ""} type="button" aria-pressed={isPublic} onClick={() => setIsPublic(true)}>
+              <Globe2 aria-hidden="true" />
+              <span>Public</span>
+            </button>
+          </div>
+          <span className="field-hint">{isPublic ? "Public uploads are sent to review before they appear in the feed." : "Private uploads stay in your library."}</span>
         </label>
         {error && <p className="error-text">{error}</p>}
         {message && <p className="success-text">{message}</p>}

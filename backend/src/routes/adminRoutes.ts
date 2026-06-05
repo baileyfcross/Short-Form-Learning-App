@@ -6,8 +6,10 @@ import {
   getReports,
   getUsers,
   rejectSnippet,
+  takeDownSnippet,
   updateReliability,
-  updateReport
+  updateReport,
+  viewSnippetSource
 } from "../controllers/adminController.js";
 import { requireAuth } from "../middleware/auth.js";
 import { requireRole } from "../middleware/roles.js";
@@ -21,6 +23,8 @@ adminRoutes.get("/materials", getMaterials);
 adminRoutes.get("/snippets/pending", getPendingSnippets);
 adminRoutes.patch("/snippets/:id/approve", approveSnippet);
 adminRoutes.patch("/snippets/:id/reject", rejectSnippet);
+adminRoutes.patch("/snippets/:id/takedown", requireRole("admin"), takeDownSnippet);
+adminRoutes.get("/snippets/:id/source", viewSnippetSource);
 adminRoutes.patch("/sources/:id/reliability", requireRole("admin"), validate(reliabilitySchema), updateReliability);
 adminRoutes.get("/reports", getReports);
 adminRoutes.patch("/reports/:id", validate(reportStatusSchema), updateReport);

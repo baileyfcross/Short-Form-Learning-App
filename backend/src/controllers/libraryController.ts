@@ -1,7 +1,7 @@
 import { libraryService } from "../services/libraryService.js";
 import { uploadInspectionService } from "../services/uploadInspectionService.js";
 import { asyncHandler } from "../middleware/asyncHandler.js";
-import { isAdmin } from "../middleware/roles.js";
+import { canReviewMaterials, isAdmin } from "../middleware/roles.js";
 import { normalizeTags } from "../utils/materialMetadata.js";
 import { AppError } from "../utils/errors.js";
 
@@ -39,7 +39,7 @@ export const getMaterial = asyncHandler(async (req, res) => {
 });
 
 export const viewMaterialFile = asyncHandler(async (req, res) => {
-  const file = await libraryService.getFileAccess(req.params.id, req.user!.id, isAdmin(req));
+  const file = await libraryService.getFileAccess(req.params.id, req.user!.id, canReviewMaterials(req));
   res.setHeader("Content-Type", file.contentType);
   res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(file.filename)}"`);
   res.sendFile(file.filePath);

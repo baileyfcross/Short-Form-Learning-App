@@ -88,8 +88,16 @@ export class Neo4jGraphRepository implements GraphRepository {
     const result = await this.driver.executeQuery(
       `MATCH (:User {id: $userId})-[:USER_UPLOADED_MATERIAL]->(m:Material {id: $materialId})
        SET m += $patch
+       WITH m
+       OPTIONAL MATCH (m)-[:MATERIAL_GENERATED_SNIPPET]->(s:Snippet)
+       FOREACH (_ IN CASE WHEN $isPublic = false AND s IS NOT NULL THEN [1] ELSE [] END |
+         SET s.moderationStatus = 'private', s.isPublic = false
+       )
+       FOREACH (_ IN CASE WHEN $isPublic = true AND s.moderationStatus = 'private' THEN [1] ELSE [] END |
+         SET s.moderationStatus = 'pending', s.isPublic = true
+       )
        RETURN m`,
-      { materialId, userId, patch }
+      { materialId, userId, patch, isPublic: patch.isPublic ?? null }
     );
     return result.records[0] ? this.stripReliability(this.node<Material & { reliabilityScore: number }>(result.records[0].get("m"))) : null;
   }
@@ -179,15 +187,38 @@ export class Neo4jGraphRepository implements GraphRepository {
     return result.records[0] ? this.stripReliability(this.node<Material & { reliabilityScore: number }>(result.records[0].get("m"))) : null;
   }
 
+  async getReviewSnippetSourceMaterial(snippetId: string) {
+    const result = await this.driver.executeQuery(
+      `MATCH (m:Material)-[:MATERIAL_GENERATED_SNIPPET]->(s:Snippet {id: $snippetId})
+       WHERE s.moderationStatus IN ['pending', 'approved']
+       RETURN m LIMIT 1`,
+      { snippetId }
+    );
+    return result.records[0] ? this.stripReliability(this.node<Material & { reliabilityScore: number }>(result.records[0].get("m"))) : null;
+  }
+
   async listPendingSnippets() {
-    const result = await this.driver.executeQuery("MATCH (s:Snippet {moderationStatus: 'pending'}) RETURN s ORDER BY s.createdAt ASC");
-    return result.records.map((record) => this.toAdminSnippet(this.node<SnippetAdminRecord>(record.get("s"))));
+    const result = await this.driver.executeQuery(
+      `MATCH (m:Material)-[:MATERIAL_GENERATED_SNIPPET]->(s:Snippet {moderationStatus: 'pending'})
+       RETURN s, m ORDER BY s.createdAt ASC`
+    );
+    return result.records.map((record) => this.toAdminSnippetWithMaterial(record.get("s"), record.get("m")));
+  }
+
+  async listApprovedSnippets() {
+    const result = await this.driver.executeQuery(
+      `MATCH (m:Material)-[:MATERIAL_GENERATED_SNIPPET]->(s:Snippet {moderationStatus: 'approved'})
+       WHERE s.isPublic = true
+       RETURN s, m ORDER BY s.createdAt DESC`
+    );
+    return result.records.map((record) => this.toAdminSnippetWithMaterial(record.get("s"), record.get("m")));
   }
 
   async moderateSnippet(snippetId: string, status: "approved" | "rejected", reviewerId: string) {
     const result = await this.driver.executeQuery(
       `MATCH (admin:User {id: $reviewerId}), (s:Snippet {id: $snippetId})
        SET s.moderationStatus = $status
+       SET s.isPublic = CASE WHEN $status = 'approved' THEN true ELSE false END
        CREATE (admin)-[:ADMIN_REVIEWED_SNIPPET {status: $status, reviewedAt: datetime()}]->(s)
        RETURN s`,
       { snippetId, status, reviewerId }
@@ -288,6 +319,19 @@ export class Neo4jGraphRepository implements GraphRepository {
 
   private toAdminSnippet(snippet: SnippetAdminRecord): AdminSnippet {
     return { ...snippet, supportingSources: snippet.supportingSources ?? [], conflictingSources: snippet.conflictingSources ?? [] };
+  }
+
+  private toAdminSnippetWithMaterial(snippetNode: { properties: SnippetAdminRecord }, materialNode: { properties: Material & { reliabilityScore?: number } }): AdminSnippet {
+    const snippet = this.toAdminSnippet(this.node<SnippetAdminRecord>(snippetNode));
+    const material = this.stripReliability(this.node<Material & { reliabilityScore?: number }>(materialNode));
+    return {
+      ...snippet,
+      sourceMaterial: {
+        id: material.id,
+        title: material.title,
+        mediaType: material.mediaType
+      }
+    };
   }
 
   private toPublicSnippet(snippet: SnippetAdminRecord): Snippet {

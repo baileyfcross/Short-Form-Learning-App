@@ -1,15 +1,18 @@
-import { Check, ShieldAlert, X } from "lucide-react";
-import type { AdminSnippet, Material } from "@shortlearn/shared";
+import { Check, Eye, ShieldAlert, X } from "lucide-react";
+import type { AdminSnippet } from "@shortlearn/shared";
 
 interface AdminPageProps {
   pending: AdminSnippet[];
-  materials: Material[];
+  materials: AdminSnippet[];
+  canTakeDown: boolean;
   onApprove: (id: string) => void;
   onReject: (id: string) => void;
+  onViewSnippetSource: (snippet: AdminSnippet) => void;
+  onTakeDown: (id: string) => void;
   onRefresh: () => void;
 }
 
-export const AdminPage = ({ pending, materials, onApprove, onReject, onRefresh }: AdminPageProps) => (
+export const AdminPage = ({ pending, materials, canTakeDown, onApprove, onReject, onViewSnippetSource, onTakeDown, onRefresh }: AdminPageProps) => (
   <section className="page-stack">
     <header className="page-header">
       <div>
@@ -34,6 +37,11 @@ export const AdminPage = ({ pending, materials, onApprove, onReject, onRefresh }
               <small>Reliability: {snippet.reliabilityScore} | Confidence: {snippet.confidenceScore}</small>
             </div>
             <div className="button-row">
+              {snippet.sourceMaterial && (
+                <button className="icon-button" title="View file" aria-label={`View ${snippet.sourceMaterial.title}`} onClick={() => onViewSnippetSource(snippet)}>
+                  <Eye aria-hidden="true" />
+                </button>
+              )}
               <button className="icon-button" title="Approve" aria-label="Approve" onClick={() => onApprove(snippet.id)}>
                 <Check aria-hidden="true" />
               </button>
@@ -45,12 +53,27 @@ export const AdminPage = ({ pending, materials, onApprove, onReject, onRefresh }
         ))}
       </section>
       <section className="panel">
-        <h2>Uploaded materials</h2>
+        <h2>Approved public items</h2>
+        {materials.length === 0 && <p className="empty-state">No approved public items.</p>}
         <div className="compact-list">
-          {materials.map((material) => (
-            <div key={material.id}>
-              <strong>{material.title}</strong>
-              <span>{material.subject} | {material.processingStatus}</span>
+          {materials.map((snippet) => (
+            <div className="review-material-row" key={snippet.id}>
+              <div>
+                <strong>{snippet.sourceMaterial?.title ?? snippet.title}</strong>
+                <span>{snippet.subject} | approved public feed item</span>
+              </div>
+              <div className="button-row">
+                {snippet.sourceMaterial && (
+                  <button className="icon-button" title="View file" aria-label={`View ${snippet.sourceMaterial.title}`} onClick={() => onViewSnippetSource(snippet)}>
+                    <Eye aria-hidden="true" />
+                  </button>
+                )}
+                {canTakeDown && (
+                  <button className="icon-button danger" title="Take down" aria-label={`Take down ${snippet.title}`} onClick={() => onTakeDown(snippet.id)}>
+                    <X aria-hidden="true" />
+                  </button>
+                )}
+              </div>
             </div>
           ))}
         </div>

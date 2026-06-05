@@ -293,6 +293,34 @@ td:first-child {
   gap: 8px;
 }
 
+.visibility-control {
+  display: inline-grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 4px;
+  min-width: 184px;
+  padding: 4px;
+  border-radius: 8px;
+  background: #eef2f5;
+}
+
+.visibility-control button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-height: 34px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: #34424b;
+}
+
+.visibility-control button.active {
+  background: #ffffff;
+  color: #0d4b43;
+  box-shadow: 0 1px 3px rgba(24, 32, 38, 0.12);
+}
+
 .form-grid,
 .upload-form {
   display: grid;
@@ -368,6 +396,13 @@ textarea {
   gap: 2px;
   padding-bottom: 10px;
   border-bottom: 1px solid #e3e7ea;
+}
+
+.compact-list .review-material-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
 }
 
 .compact-list span {

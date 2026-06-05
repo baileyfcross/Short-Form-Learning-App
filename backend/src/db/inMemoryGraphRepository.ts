@@ -98,6 +98,16 @@ export class InMemoryGraphRepository implements GraphRepository {
     };
     const updated = { ...material, ...Object.fromEntries(Object.entries(allowedPatch).filter(([, value]) => value !== undefined)) };
     this.materials.set(materialId, updated);
+    if (patch.isPublic !== undefined) {
+      for (const snippet of this.snippets.values()) {
+        if (snippet.sourceMaterialId !== materialId) continue;
+        if (!patch.isPublic) {
+          this.snippets.set(snippet.id, { ...snippet, moderationStatus: "private", isPublic: false });
+        } else if (snippet.moderationStatus === "private") {
+          this.snippets.set(snippet.id, { ...snippet, moderationStatus: "pending", isPublic: true });
+        }
+      }
+    }
     return this.stripReliability(updated);
   }
 
@@ -161,16 +171,33 @@ export class InMemoryGraphRepository implements GraphRepository {
     return material ? this.stripReliability(material) : null;
   }
 
+  async getReviewSnippetSourceMaterial(snippetId: string) {
+    const snippet = this.snippets.get(snippetId);
+    if (!snippet || !["pending", "approved"].includes(snippet.moderationStatus) || !snippet.sourceMaterialId) return null;
+    const material = this.materials.get(snippet.sourceMaterialId);
+    return material ? this.stripReliability(material) : null;
+  }
+
   async listPendingSnippets() {
-    return [...this.snippets.values()].filter((snippet) => snippet.moderationStatus === "pending");
+    return [...this.snippets.values()]
+      .filter((snippet) => snippet.moderationStatus === "pending")
+      .filter((snippet) => !snippet.sourceMaterialId || this.materials.has(snippet.sourceMaterialId))
+      .map((snippet) => this.toAdminSnippet(snippet));
+  }
+
+  async listApprovedSnippets() {
+    return [...this.snippets.values()]
+      .filter((snippet) => snippet.moderationStatus === "approved" && snippet.isPublic)
+      .filter((snippet) => !snippet.sourceMaterialId || this.materials.has(snippet.sourceMaterialId))
+      .map((snippet) => this.toAdminSnippet(snippet));
   }
 
   async moderateSnippet(snippetId: string, status: "approved" | "rejected", _reviewerId: string) {
     const snippet = this.snippets.get(snippetId);
     if (!snippet) return null;
-    const updated: SnippetAdminRecord = { ...snippet, moderationStatus: status };
+    const updated: SnippetAdminRecord = { ...snippet, moderationStatus: status, isPublic: status === "approved" };
     this.snippets.set(snippetId, updated);
-    return updated;
+    return this.toAdminSnippet(updated);
   }
 
   async setSourceReliability(sourceId: string, score: number) {
@@ -227,6 +254,20 @@ export class InMemoryGraphRepository implements GraphRepository {
     const sourceMaterial = safeSnippet.sourceMaterialId ? this.materials.get(safeSnippet.sourceMaterialId) : undefined;
     return {
       ...safeSnippet,
+      sourceMaterial: sourceMaterial
+        ? {
+            id: sourceMaterial.id,
+            title: sourceMaterial.title,
+            mediaType: sourceMaterial.mediaType
+          }
+        : undefined
+    };
+  }
+
+  private toAdminSnippet(snippet: SnippetAdminRecord): SnippetAdminRecord {
+    const sourceMaterial = snippet.sourceMaterialId ? this.materials.get(snippet.sourceMaterialId) : undefined;
+    return {
+      ...snippet,
       sourceMaterial: sourceMaterial
         ? {
             id: sourceMaterial.id,

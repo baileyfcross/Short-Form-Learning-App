@@ -24,7 +24,7 @@ export const App = () => {
   const [feed, setFeed] = useState<Snippet[]>([]);
   const [library, setLibrary] = useState<Material[]>([]);
   const [pending, setPending] = useState<AdminSnippet[]>([]);
-  const [adminMaterials, setAdminMaterials] = useState<Material[]>([]);
+  const [adminMaterials, setAdminMaterials] = useState<AdminSnippet[]>([]);
 
   const api = useMemo(() => new ApiClient(() => session?.accessToken, () => devUserEmail ?? undefined), [devUserEmail, session?.accessToken]);
 
@@ -89,6 +89,11 @@ export const App = () => {
             window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
           }}
           onDownload={(material) => void api.downloadMaterial(material.id)}
+          onVisibilityChange={async (material, isPublic) => {
+            await api.updateMaterial(material.id, { isPublic });
+            await refreshLibrary();
+            await refreshFeed();
+          }}
         />
       )}
       {view === "upload" && (
@@ -105,14 +110,26 @@ export const App = () => {
         <AdminPage
           pending={pending}
           materials={adminMaterials}
+          canTakeDown={session.user.roles.includes("admin")}
           onRefresh={() => void refreshAdmin()}
           onApprove={async (id) => {
             await api.approveSnippet(id);
             await refreshAdmin();
+            await refreshFeed();
           }}
           onReject={async (id) => {
             await api.rejectSnippet(id);
             await refreshAdmin();
+          }}
+          onViewSnippetSource={async (snippet) => {
+            const url = await api.viewAdminSnippetSource(snippet.id);
+            window.open(url, "_blank", "noopener,noreferrer");
+            window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+          }}
+          onTakeDown={async (id) => {
+            await api.takeDownSnippet(id);
+            await refreshAdmin();
+            await refreshFeed();
           }}
         />
       )}

@@ -10,6 +10,7 @@
 - Helmet and constrained CORS are enabled.
 - Full materials are private by default; public feed entries must be approved snippets.
 - Material owners can view and download their own uploaded files without moderation. Full uploaded files are not exposed to other users through public feed approval.
+- Admins and moderators can view uploaded files for review. Download/delete privileges remain separate from moderator review access.
 - Public feed snippets depend on their source material. If the owner or an admin deletes the uploaded material, generated snippets are deleted from the feed as well.
 - Approved public snippets expose view-only access to the source document from the feed. Owner-only download access remains separate.
 - Malware scanning is designed as a future upload pipeline step and should be added before public production use.

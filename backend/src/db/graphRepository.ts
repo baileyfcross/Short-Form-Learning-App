@@ -25,7 +25,9 @@ export interface GraphRepository {
   listFeed(options: FeedOptions): Promise<Snippet[]>;
   getPublicSnippet(snippetId: string): Promise<Snippet | null>;
   getApprovedSnippetSourceMaterial(snippetId: string): Promise<Material | null>;
+  getReviewSnippetSourceMaterial(snippetId: string): Promise<Material | null>;
   listPendingSnippets(): Promise<AdminSnippet[]>;
+  listApprovedSnippets(): Promise<AdminSnippet[]>;
   moderateSnippet(snippetId: string, status: "approved" | "rejected", reviewerId: string): Promise<AdminSnippet | null>;
   setSourceReliability(sourceId: string, score: number): Promise<void>;
   search(options: VectorSearchOptions): Promise<Array<Material | Snippet>>;

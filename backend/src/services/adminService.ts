@@ -3,7 +3,7 @@ import { notFound } from "../utils/errors.js";
 
 export class AdminService {
   materials() {
-    return graphRepository.listAllMaterials();
+    return graphRepository.listApprovedSnippets();
   }
 
   pendingSnippets() {
@@ -12,6 +12,12 @@ export class AdminService {
 
   async moderateSnippet(id: string, status: "approved" | "rejected", reviewerId: string) {
     const snippet = await graphRepository.moderateSnippet(id, status, reviewerId);
+    if (!snippet) throw notFound("Snippet");
+    return snippet;
+  }
+
+  async takeDownSnippet(id: string, reviewerId: string) {
+    const snippet = await graphRepository.moderateSnippet(id, "rejected", reviewerId);
     if (!snippet) throw notFound("Snippet");
     return snippet;
   }

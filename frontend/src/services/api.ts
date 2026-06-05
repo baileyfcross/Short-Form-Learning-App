@@ -50,6 +50,10 @@ export class ApiClient {
     return this.request<Material>("/library/upload", { method: "POST", body: form, omitJsonHeader: true });
   }
 
+  async updateMaterial(materialId: string, patch: Partial<Pick<Material, "isPublic">>) {
+    return this.request<Material>(`/library/${materialId}`, { method: "PATCH", body: JSON.stringify(patch) });
+  }
+
   async inspectUpload(form: FormData) {
     return this.request<UploadInspection>("/library/inspect", { method: "POST", body: form, omitJsonHeader: true });
   }
@@ -89,7 +93,16 @@ export class ApiClient {
   }
 
   async materialsAdmin() {
-    return this.request<Material[]>("/admin/materials");
+    return this.request<AdminSnippet[]>("/admin/materials");
+  }
+
+  async viewAdminSnippetSource(snippetId: string) {
+    const { blob } = await this.blobRequest(`/admin/snippets/${snippetId}/source`);
+    return URL.createObjectURL(blob);
+  }
+
+  async takeDownSnippet(id: string) {
+    return this.request<AdminSnippet>(`/admin/snippets/${id}/takedown`, { method: "PATCH" });
   }
 
   private async request<T>(path: string, init: RequestInit & { omitJsonHeader?: boolean; devUserEmail?: string } = {}) {

@@ -29,20 +29,23 @@ export class MediaProcessingService {
     const verification = await factVerificationService.verifyClaim(primaryClaim);
     const confidenceScore = Math.round(Math.max(verification.confidenceScore, facts[0]?.confidenceScore ?? extracted.confidenceScore) * 100);
 
+    const latestMaterial = await graphRepository.getMaterialForUser(material.id, material.ownerId, false);
+    const snippetMaterial = latestMaterial ?? material;
+
     await graphRepository.createSnippet({
-      sourceMaterialId: material.id,
-      uploaderId: material.ownerId,
-      title: `Short lesson from ${material.title}`,
-      subject: material.subject,
-      tags: material.tags,
+      sourceMaterialId: snippetMaterial.id,
+      uploaderId: snippetMaterial.ownerId,
+      title: `Short lesson from ${snippetMaterial.title}`,
+      subject: snippetMaterial.subject,
+      tags: snippetMaterial.tags,
       summary: this.buildSummary(primaryClaim, facts.length),
       transcript: extracted.text,
-      contentType: material.mediaType === "audio" ? "audio" : material.mediaType === "video" ? "video" : "text",
-      objectKey: material.objectKey,
-      citation: material.sourceUrl,
+      contentType: snippetMaterial.mediaType === "audio" ? "audio" : snippetMaterial.mediaType === "video" ? "video" : "text",
+      objectKey: snippetMaterial.objectKey,
+      citation: snippetMaterial.sourceUrl,
       confidenceScore,
       reliabilityScore: 55,
-      isPublic: material.isPublic
+      isPublic: snippetMaterial.isPublic
     });
   }
 

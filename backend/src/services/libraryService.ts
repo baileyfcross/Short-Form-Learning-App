@@ -73,6 +73,12 @@ export class LibraryService {
     return this.fileAccessForMaterial(material);
   }
 
+  async getReviewSnippetSourceFileAccess(snippetId: string) {
+    const material = await graphRepository.getReviewSnippetSourceMaterial(snippetId);
+    if (!material) throw notFound("Review source material");
+    return this.fileAccessForMaterial(material);
+  }
+
   private fileAccessForMaterial(material: Material) {
     if (!objectStorageService.resolveObjectPath) {
       throw new AppError(501, "Direct local file access is not available for this storage provider");

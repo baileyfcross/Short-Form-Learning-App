@@ -110,6 +110,7 @@ Admin:
 
 - Uploaded files are stored by object key; Neo4j stores metadata and relationships only.
 - Upload owners can view and download their own full materials immediately from their personal library.
+- Admins and moderators can view uploaded files from the review dashboard.
 - Public feed content only comes from approved snippets generated from user library uploads.
 - Feed users can view the approved snippet and its source document after approval.
 - Approved feed items are visible to every role. User role, subject preference, viewed history, and internal reliability score do not hide approved feed items.

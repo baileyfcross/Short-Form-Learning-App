@@ -13,3 +13,4 @@ export const requireRole =
   };
 
 export const isAdmin = (req: Request) => Boolean(req.user?.roles.includes("admin"));
+export const canReviewMaterials = (req: Request) => Boolean(req.user?.roles.some((role) => role === "admin" || role === "moderator"));
