@@ -6,9 +6,18 @@ import type { ApiClient } from "../../services/api";
 interface AuthScreenProps {
   api: ApiClient;
   onSession: (session: AuthResponse) => void;
+  onDevSession: (email: string, session: AuthResponse) => void;
 }
 
-export const AuthScreen = ({ api, onSession }: AuthScreenProps) => {
+const demoUsers = [
+  { label: "Learner", email: "learner@example.com" },
+  { label: "Moderator", email: "moderator@example.com" },
+  { label: "Admin", email: "admin@example.com" }
+];
+
+const devLoginEnabled = import.meta.env.VITE_DEV_LOGIN_ENABLED === "true";
+
+export const AuthScreen = ({ api, onSession, onDevSession }: AuthScreenProps) => {
   const [mode, setMode] = useState<"login" | "register">("login");
   const [email, setEmail] = useState("learner@example.com");
   const [password, setPassword] = useState("ChangeMe12345");
@@ -27,6 +36,15 @@ export const AuthScreen = ({ api, onSession }: AuthScreenProps) => {
       onSession(session);
     } catch (err) {
       setError(err instanceof Error ? err.message : "Unable to authenticate");
+    }
+  };
+
+  const continueAsDemo = async (email: string) => {
+    setError(null);
+    try {
+      onDevSession(email, await api.devLogin(email));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Dev login is unavailable");
     }
   };
 
@@ -71,6 +89,18 @@ export const AuthScreen = ({ api, onSession }: AuthScreenProps) => {
             <LogIn aria-hidden="true" />
             <span>{mode === "login" ? "Login" : "Create account"}</span>
           </button>
+          {devLoginEnabled && (
+            <div className="dev-login-panel">
+              <span>Local dev login</span>
+              <div className="button-row">
+                {demoUsers.map((user) => (
+                  <button className="secondary-button" key={user.email} type="button" onClick={() => void continueAsDemo(user.email)}>
+                    {user.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
         </form>
       </section>
     </main>

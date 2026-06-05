@@ -3,7 +3,10 @@ import type { AdminSnippet, AuthResponse, Material, Snippet, UserPublic } from "
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4000/api";
 
 export class ApiClient {
-  constructor(private getToken: () => string | undefined) {}
+  constructor(
+    private getToken: () => string | undefined,
+    private getDevUserEmail: () => string | undefined = () => undefined
+  ) {}
 
   async register(input: { email: string; password: string; displayName: string; subjects: string[] }) {
     return this.request<AuthResponse>("/auth/register", { method: "POST", body: JSON.stringify(input) });
@@ -15,6 +18,11 @@ export class ApiClient {
 
   async me() {
     return this.request<UserPublic>("/auth/me");
+  }
+
+  async devLogin(email: string): Promise<AuthResponse> {
+    const user = await this.request<UserPublic>("/auth/me", { devUserEmail: email });
+    return { user, accessToken: "", refreshToken: "" };
   }
 
   async library() {
@@ -58,11 +66,13 @@ export class ApiClient {
     return this.request<Material[]>("/admin/materials");
   }
 
-  private async request<T>(path: string, init: RequestInit & { omitJsonHeader?: boolean } = {}) {
+  private async request<T>(path: string, init: RequestInit & { omitJsonHeader?: boolean; devUserEmail?: string } = {}) {
     const token = this.getToken();
+    const devUserEmail = init.devUserEmail ?? this.getDevUserEmail();
     const headers = new Headers(init.headers);
     if (!init.omitJsonHeader) headers.set("Content-Type", "application/json");
     if (token) headers.set("Authorization", `Bearer ${token}`);
+    if (devUserEmail) headers.set("X-ShortLearn-Dev-User", devUserEmail);
 
     const response = await fetch(`${API_BASE_URL}${path}`, { ...init, headers });
     if (!response.ok) {

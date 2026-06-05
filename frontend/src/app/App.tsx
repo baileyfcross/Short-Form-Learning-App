@@ -15,23 +15,37 @@ const storedSession = () => {
   return raw ? (JSON.parse(raw) as AuthResponse) : null;
 };
 
+const storedDevUserEmail = () => localStorage.getItem("shortlearn.devUserEmail");
+
 export const App = () => {
   const [session, setSession] = useState<AuthResponse | null>(storedSession);
+  const [devUserEmail, setDevUserEmail] = useState<string | null>(storedDevUserEmail);
   const [view, setView] = useState<ViewKey>("feed");
   const [feed, setFeed] = useState<Snippet[]>([]);
   const [library, setLibrary] = useState<Material[]>([]);
   const [pending, setPending] = useState<AdminSnippet[]>([]);
   const [adminMaterials, setAdminMaterials] = useState<Material[]>([]);
 
-  const api = useMemo(() => new ApiClient(() => session?.accessToken), [session?.accessToken]);
+  const api = useMemo(() => new ApiClient(() => session?.accessToken, () => devUserEmail ?? undefined), [devUserEmail, session?.accessToken]);
 
   const saveSession = (nextSession: AuthResponse) => {
+    localStorage.removeItem("shortlearn.devUserEmail");
+    setDevUserEmail(null);
     localStorage.setItem("shortlearn.session", JSON.stringify(nextSession));
+    setSession(nextSession);
+  };
+
+  const saveDevSession = (email: string, nextSession: AuthResponse) => {
+    localStorage.setItem("shortlearn.devUserEmail", email);
+    localStorage.setItem("shortlearn.session", JSON.stringify(nextSession));
+    setDevUserEmail(email);
     setSession(nextSession);
   };
 
   const logout = () => {
     localStorage.removeItem("shortlearn.session");
+    localStorage.removeItem("shortlearn.devUserEmail");
+    setDevUserEmail(null);
     setSession(null);
   };
 
@@ -49,7 +63,7 @@ export const App = () => {
     if (nextView === "admin") await refreshAdmin();
   };
 
-  if (!session) return <AuthScreen api={api} onSession={saveSession} />;
+  if (!session) return <AuthScreen api={api} onSession={saveSession} onDevSession={saveDevSession} />;
 
   return (
     <Shell user={session.user} view={view} setView={(nextView) => void switchView(nextView)} onLogout={logout}>

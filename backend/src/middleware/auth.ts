@@ -2,6 +2,11 @@ import type { NextFunction, Request, Response } from "express";
 import { verifyAccessToken } from "../security/tokens.js";
 
 export const requireAuth = (req: Request, res: Response, next: NextFunction) => {
+  if (req.user) {
+    next();
+    return;
+  }
+
   const header = req.header("authorization");
   const token = header?.startsWith("Bearer ") ? header.slice("Bearer ".length) : undefined;
   if (!token) {

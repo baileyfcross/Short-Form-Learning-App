@@ -7,12 +7,22 @@
     "shared"
   ],
   "scripts": {
-    "dev": "npm run dev --workspace backend",
+    "dev": "concurrently -n backend,frontend -c cyan,green \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:local-auth": "concurrently -n backend,frontend -c cyan,green \"cross-env DEV_LOGIN_ENABLED=true SEED_DEMO_USERS=true npm run dev:backend\" \"cross-env VITE_DEV_LOGIN_ENABLED=true npm run dev:frontend\"",
+    "dev:all": "npm run dev",
     "dev:backend": "npm run dev --workspace backend",
     "dev:frontend": "npm run dev --workspace frontend",
+    "stop": "node scripts/stop-local-servers.mjs",
+    "stop:dry-run": "node scripts/stop-local-servers.mjs --dry-run",
     "preview:frontend": "npm run preview --workspace frontend",
+    "seed": "npm run seed --workspace backend",
     "build": "npm run build --workspaces",
+    "build:production": "cross-env NODE_ENV=production DEV_LOGIN_ENABLED=false SEED_DEMO_USERS=false VITE_DEV_LOGIN_ENABLED=false npm run build",
     "typecheck": "npm run typecheck --workspaces"
+  },
+  "devDependencies": {
+    "concurrently": "^9.1.0",
+    "cross-env": "^7.0.3"
   },
   "engines": {
     "node": ">=20"

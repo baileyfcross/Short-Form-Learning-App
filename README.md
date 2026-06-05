@@ -17,11 +17,34 @@ Secure, production-minded MVP scaffold for a short-form learning app with a Reac
 ```bash
 npm install
 cp .env.example .env
-npm run dev:backend
-npm run dev:frontend
+npm run dev
 ```
 
 The backend defaults to `GRAPH_MODE=memory`, so it can run without Neo4j for first local testing. Set `GRAPH_MODE=neo4j` and configure `NEO4J_URI`, `NEO4J_USERNAME`, and `NEO4J_PASSWORD` to use a real database.
+
+`npm run dev` starts both the backend and frontend together. You can still run either side alone with `npm run dev:backend` or `npm run dev:frontend`.
+
+To stop local app servers on ports `4000`, `4173`, and `5173`:
+
+```bash
+npm run stop
+```
+
+To inspect what would be stopped first:
+
+```bash
+npm run stop:dry-run
+```
+
+Local demo login credentials are documented in [demo users](docs/demo-users.md). Use `npm run dev:local-auth` for persistent local demo login through dev-only middleware, or `npm run seed` for a persistent Neo4j database.
+
+For production builds, use:
+
+```bash
+npm run build:production
+```
+
+That script disables demo users and dev login controls.
 
 For a production-build preview of the web app:
 
