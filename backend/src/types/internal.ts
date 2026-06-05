@@ -71,6 +71,7 @@ export interface ExtractedContent {
   confidenceScore: number;
   provider: string;
   warnings: string[];
+  title?: string;
 }
 
 export interface ExtractedFactClaim {

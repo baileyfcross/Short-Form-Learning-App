@@ -20,7 +20,7 @@ DEMO_USER_PASSWORD=ChangeMe12345
 Then run:
 
 ```bash
-npm run dev:local-auth
+npm run dev
 ```
 
 This starts the backend with `DEV_LOGIN_ENABLED=true` and the frontend with `VITE_DEV_LOGIN_ENABLED=true`. The frontend stores your selected demo user email in `localStorage`, so it survives frontend rebuilds until you log out or clear browser storage.

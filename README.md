@@ -22,7 +22,7 @@ npm run dev
 
 The backend defaults to `GRAPH_MODE=memory`, so it can run without Neo4j for first local testing. Set `GRAPH_MODE=neo4j` and configure `NEO4J_URI`, `NEO4J_USERNAME`, and `NEO4J_PASSWORD` to use a real database.
 
-`npm run dev` starts both the backend and frontend together. You can still run either side alone with `npm run dev:backend` or `npm run dev:frontend`.
+`npm run dev` starts both the backend and frontend together with local demo auth enabled. You can still run either side alone with `npm run dev:backend` or `npm run dev:frontend`.
 
 To stop local app servers on ports `4000`, `4173`, and `5173`:
 
@@ -36,7 +36,7 @@ To inspect what would be stopped first:
 npm run stop:dry-run
 ```
 
-Local demo login credentials are documented in [demo users](docs/demo-users.md). Use `npm run dev:local-auth` for persistent local demo login through dev-only middleware, or `npm run seed` for a persistent Neo4j database.
+Local demo login credentials are documented in [demo users](docs/demo-users.md). `npm run dev` enables persistent local demo login through dev-only middleware. Use `npm run dev:no-local-auth` if you want to run local development without that helper, or `npm run seed` for a persistent Neo4j database.
 
 For production builds, use:
 
@@ -99,4 +99,5 @@ Admin:
 - Uploaded files are stored by object key; Neo4j stores metadata and relationships only.
 - Public feed content only comes from approved snippets.
 - The current processing pipeline generates a pending snippet from uploaded public material using local parsers and graceful fallbacks.
+- Selecting a file on the upload screen inspects local metadata and pre-fills title, description, subject, and tags while keeping every field editable.
 - See [local processing](docs/local-processing.md), [Neo4j schema](docs/neo4j-schema.md), [security notes](docs/security-notes.md), and [production TODO](docs/production-todo.md).

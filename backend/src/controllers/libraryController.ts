@@ -1,10 +1,13 @@
 import { libraryService } from "../services/libraryService.js";
+import { uploadInspectionService } from "../services/uploadInspectionService.js";
 import { asyncHandler } from "../middleware/asyncHandler.js";
 import { isAdmin } from "../middleware/roles.js";
+import { normalizeTags } from "../utils/materialMetadata.js";
+import { AppError } from "../utils/errors.js";
 
 const parseTags = (value: unknown) => {
-  if (Array.isArray(value)) return value.map(String);
-  if (typeof value === "string") return value.split(",").map((tag) => tag.trim()).filter(Boolean);
+  if (Array.isArray(value)) return normalizeTags(value.map(String));
+  if (typeof value === "string") return normalizeTags(value);
   return [];
 };
 
@@ -24,6 +27,11 @@ export const uploadMaterial = asyncHandler(async (req, res) => {
       isPublic: req.body.isPublic === "true" || req.body.isPublic === true
     })
   );
+});
+
+export const inspectUpload = asyncHandler(async (req, res) => {
+  if (!req.file) throw new AppError(400, "File is required");
+  res.json(await uploadInspectionService.inspect(req.file!));
 });
 
 export const getMaterial = asyncHandler(async (req, res) => {

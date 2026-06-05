@@ -83,3 +83,14 @@ export interface ApiErrorResponse {
   message: string;
   details?: unknown;
 }
+
+export interface UploadInspection {
+  title: string;
+  description: string;
+  subject: string;
+  tags: string[];
+  mediaType: MediaType;
+  confidenceScore: number;
+  provider: string;
+  warnings: string[];
+}

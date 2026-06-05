@@ -9,12 +9,17 @@ import { objectStorageService } from "./objectStorageService.js";
 
 export interface DocumentParsingService {
   extract(input: { objectKey: string; mediaType: Material["mediaType"]; title: string }): Promise<ExtractedContent>;
+  extractFile(input: { filePath: string; mediaType: Material["mediaType"]; title: string }): Promise<ExtractedContent>;
 }
 
 export class LocalDocumentParsingService implements DocumentParsingService {
   async extract(input: { objectKey: string; mediaType: Material["mediaType"]; title: string }): Promise<ExtractedContent> {
     const filePath = this.resolvePath(input.objectKey);
+    return this.extractFile({ filePath, mediaType: input.mediaType, title: input.title });
+  }
 
+  async extractFile(input: { filePath: string; mediaType: Material["mediaType"]; title: string }): Promise<ExtractedContent> {
+    const filePath = input.filePath;
     if (input.mediaType === "pdf") return this.extractPdf(filePath);
     if (input.mediaType === "document") return this.extractDocument(filePath);
     if (input.mediaType === "text") return this.extractText(filePath);
@@ -33,9 +38,11 @@ export class LocalDocumentParsingService implements DocumentParsingService {
     const buffer = await readFile(filePath);
     const result = await pdfParse(buffer);
     const text = this.normalizeText(result.text);
+    const title = typeof result.info?.Title === "string" ? result.info.Title : undefined;
 
     return {
       text,
+      title,
       confidenceScore: text.length > 200 ? 0.86 : 0.45,
       provider: "pdf-parse",
       warnings: text.length > 40 ? [] : ["PDF text layer was sparse. This may be a scanned PDF that needs OCR."]

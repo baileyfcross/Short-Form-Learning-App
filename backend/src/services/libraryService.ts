@@ -4,6 +4,7 @@ import { graphRepository } from "../db/index.js";
 import { AppError, notFound } from "../utils/errors.js";
 import { mediaProcessingService } from "./mediaProcessingService.js";
 import { objectStorageService } from "./objectStorageService.js";
+import { detectMediaType, normalizeDescription, normalizeTags, normalizeTitle, validateMaterialMetadata } from "../utils/materialMetadata.js";
 
 export class LibraryService {
   async list(userId: string) {
@@ -20,6 +21,13 @@ export class LibraryService {
     isPublic: boolean;
   }) {
     if (!input.file) throw new AppError(400, "File is required");
+    const metadata = {
+      title: normalizeTitle(input.title || input.file.originalname || "Untitled"),
+      description: input.description ? normalizeDescription(input.description) : undefined,
+      tags: normalizeTags(input.tags)
+    };
+    validateMaterialMetadata({ title: metadata.title, description: metadata.description, tags: metadata.tags });
+
     const stored = await objectStorageService.putObject({
       stream: Readable.from(input.file.buffer),
       originalName: input.file.originalname,
@@ -30,12 +38,12 @@ export class LibraryService {
 
     const material = await graphRepository.createMaterial({
       ownerId: input.userId,
-      title: input.title,
-      description: input.description,
+      title: metadata.title,
+      description: metadata.description,
       subject: input.subject,
-      tags: input.tags,
+      tags: metadata.tags,
       isPublic: input.isPublic,
-      mediaType: this.detectMediaType(input.file.mimetype),
+      mediaType: detectMediaType(input.file.mimetype, input.file.originalname),
       objectKey: stored.objectKey,
       sourceUrl: stored.url
     });
@@ -64,15 +72,6 @@ export class LibraryService {
     if (!deleted) throw notFound("Material");
   }
 
-  private detectMediaType(mimetype: string): MediaType {
-    if (mimetype.includes("pdf")) return "pdf";
-    if (mimetype.startsWith("audio/")) return "audio";
-    if (mimetype.startsWith("video/")) return "video";
-    if (mimetype.startsWith("image/")) return "image";
-    if (mimetype.includes("text")) return "text";
-    if (mimetype.includes("document") || mimetype.includes("word")) return "document";
-    return "other";
-  }
 }
 
 export const libraryService = new LibraryService();

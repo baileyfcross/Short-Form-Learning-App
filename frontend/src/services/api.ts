@@ -1,4 +1,4 @@
-import type { AdminSnippet, AuthResponse, Material, Snippet, UserPublic } from "@shortlearn/shared";
+import type { AdminSnippet, AuthResponse, Material, Snippet, UploadInspection, UserPublic } from "@shortlearn/shared";
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4000/api";
 
@@ -31,6 +31,10 @@ export class ApiClient {
 
   async uploadMaterial(form: FormData) {
     return this.request<Material>("/library/upload", { method: "POST", body: form, omitJsonHeader: true });
+  }
+
+  async inspectUpload(form: FormData) {
+    return this.request<UploadInspection>("/library/inspect", { method: "POST", body: form, omitJsonHeader: true });
   }
 
   async feed(subjects: string[] = []) {

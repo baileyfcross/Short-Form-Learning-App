@@ -7,8 +7,9 @@
     "shared"
   ],
   "scripts": {
-    "dev": "concurrently -n backend,frontend -c cyan,green \"npm run dev:backend\" \"npm run dev:frontend\"",
-    "dev:local-auth": "concurrently -n backend,frontend -c cyan,green \"cross-env DEV_LOGIN_ENABLED=true SEED_DEMO_USERS=true npm run dev:backend\" \"cross-env VITE_DEV_LOGIN_ENABLED=true npm run dev:frontend\"",
+    "dev": "concurrently -n backend,frontend -c cyan,green \"cross-env DEV_LOGIN_ENABLED=true SEED_DEMO_USERS=true npm run dev:backend\" \"cross-env VITE_DEV_LOGIN_ENABLED=true npm run dev:frontend\"",
+    "dev:local-auth": "npm run dev",
+    "dev:no-local-auth": "concurrently -n backend,frontend -c cyan,green \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:all": "npm run dev",
     "dev:backend": "npm run dev --workspace backend",
     "dev:frontend": "npm run dev --workspace frontend",

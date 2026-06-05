@@ -75,6 +75,7 @@ export const App = () => {
             await api.uploadMaterial(form);
             await refreshLibrary();
           }}
+          onInspect={(form) => api.inspectUpload(form)}
         />
       )}
       {view === "search" && <SearchPage onSearch={(query) => api.search(query)} />}

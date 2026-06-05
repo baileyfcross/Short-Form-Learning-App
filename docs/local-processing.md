@@ -44,6 +44,17 @@ Leave `WHISPER_BINARY`, `WHISPER_MODEL_PATH`, or `OLLAMA_MODEL` empty to use gra
 7. Extract fact candidates with Ollama or rules.
 8. Create a private or pending public snippet candidate for moderation.
 
+## Upload Form Metadata
+
+When a user selects a file, the frontend calls `POST /api/library/inspect`. The backend detects the file type, extracts text when practical, and returns suggested upload metadata:
+
+- title: capped at 40 words
+- description: capped at 1500 words
+- tags: capped at 20 comma-separated terms
+- subject: best-effort category guess
+
+The user can edit or add to these values before uploading. The backend enforces the same limits on final upload.
+
 ## Notes
 
 The local hash embedder is useful for deterministic development, tests, and small demos. For stronger semantic search, replace `LocalHashEmbeddingService` with `transformers.js`, Ollama embeddings, Python `sentence-transformers`, or a hosted embedding API.
