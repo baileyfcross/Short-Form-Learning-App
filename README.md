@@ -7,7 +7,8 @@ Secure, production-minded MVP scaffold for a short-form learning app with a Reac
 - React web app with login/signup, feed, library, upload, search, and admin moderation screens.
 - Express API with modular routes, controllers, services, validation, auth, role checks, rate limits, secure headers, and centralized error handling.
 - Graph repository abstraction with `GRAPH_MODE=memory` for local demos and `GRAPH_MODE=neo4j` for Neo4j.
-- Mock object storage, embedding, transcription, and fact verification service interfaces.
+- Object storage, embedding, transcription, parsing, extraction, and fact verification service interfaces.
+- Local processing pipelines for PDF/DOCX/text/image extraction, optional Whisper transcription, local embeddings, and fact extraction.
 - Neo4j node/relationship schema notes, constraints, and vector index examples.
 - Admin-only reliability handling; normal user responses do not expose reliability scores.
 
@@ -74,5 +75,5 @@ Admin:
 
 - Uploaded files are stored by object key; Neo4j stores metadata and relationships only.
 - Public feed content only comes from approved snippets.
-- The current processing pipeline generates a pending snippet from uploaded public material using mock services.
-- See [Neo4j schema](docs/neo4j-schema.md), [security notes](docs/security-notes.md), and [production TODO](docs/production-todo.md).
+- The current processing pipeline generates a pending snippet from uploaded public material using local parsers and graceful fallbacks.
+- See [local processing](docs/local-processing.md), [Neo4j schema](docs/neo4j-schema.md), [security notes](docs/security-notes.md), and [production TODO](docs/production-todo.md).

@@ -16,7 +16,14 @@ const envSchema = z.object({
   OBJECT_STORAGE_PROVIDER: z.enum(["local", "s3-compatible"]).default("local"),
   LOCAL_STORAGE_DIR: z.string().default("backend/storage"),
   MAX_UPLOAD_MB: z.coerce.number().int().positive().default(100),
-  RELIABILITY_MIN_PUBLIC: z.coerce.number().min(0).max(100).default(60)
+  RELIABILITY_MIN_PUBLIC: z.coerce.number().min(0).max(100).default(60),
+  EMBEDDING_DIMENSIONS: z.coerce.number().int().positive().default(384),
+  FFMPEG_BINARY: z.string().default("ffmpeg"),
+  WHISPER_BINARY: z.string().default(""),
+  WHISPER_MODEL_PATH: z.string().default(""),
+  TESSERACT_BINARY: z.string().default("tesseract"),
+  OLLAMA_URL: z.string().url().default("http://localhost:11434"),
+  OLLAMA_MODEL: z.string().default("")
 });
 
 export const env = envSchema.parse(process.env);

@@ -15,6 +15,7 @@ export interface StoredObject {
 export interface ObjectStorageService {
   putObject(input: { stream: Readable; originalName: string; contentType: string; size: number; ownerId: string }): Promise<StoredObject>;
   deleteObject(objectKey: string): Promise<void>;
+  resolveObjectPath?(objectKey: string): string;
 }
 
 export class LocalObjectStorageService implements ObjectStorageService {
@@ -41,6 +42,15 @@ export class LocalObjectStorageService implements ObjectStorageService {
 
   async deleteObject(_objectKey: string) {
     // The local MVP keeps files for auditability. A production provider should delete or retain by policy.
+  }
+
+  resolveObjectPath(objectKey: string) {
+    const storageRoot = path.resolve(env.LOCAL_STORAGE_DIR);
+    const absolutePath = path.resolve(storageRoot, objectKey);
+    if (!absolutePath.startsWith(storageRoot)) {
+      throw new Error("Invalid storage path");
+    }
+    return absolutePath;
   }
 }
 

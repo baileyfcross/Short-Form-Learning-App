@@ -65,3 +65,17 @@ export interface FactVerificationResult {
   supportingSources: SourceReference[];
   conflictingSources: SourceReference[];
 }
+
+export interface ExtractedContent {
+  text: string;
+  confidenceScore: number;
+  provider: string;
+  warnings: string[];
+}
+
+export interface ExtractedFactClaim {
+  claimText: string;
+  confidenceScore: number;
+  sourceChunkIndex: number;
+  needsVerification: boolean;
+}
