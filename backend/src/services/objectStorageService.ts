@@ -1,5 +1,5 @@
 import { createWriteStream } from "node:fs";
-import { mkdir } from "node:fs/promises";
+import { mkdir, rm } from "node:fs/promises";
 import path from "node:path";
 import { randomUUID } from "node:crypto";
 import type { Readable } from "node:stream";
@@ -40,8 +40,8 @@ export class LocalObjectStorageService implements ObjectStorageService {
     return { objectKey, url: `/objects/${objectKey}`, size: input.size, contentType: input.contentType };
   }
 
-  async deleteObject(_objectKey: string) {
-    // The local MVP keeps files for auditability. A production provider should delete or retain by policy.
+  async deleteObject(objectKey: string) {
+    await rm(this.resolveObjectPath(objectKey), { force: true });
   }
 
   resolveObjectPath(objectKey: string) {

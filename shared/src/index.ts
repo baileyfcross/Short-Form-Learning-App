@@ -46,6 +46,11 @@ export interface Snippet {
   verificationStatus: VerificationStatus;
   isPublic: boolean;
   createdAt: string;
+  sourceMaterial?: {
+    id: string;
+    title: string;
+    mediaType: MediaType;
+  };
 }
 
 export interface AdminSnippet extends Snippet {

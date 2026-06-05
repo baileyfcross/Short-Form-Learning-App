@@ -49,7 +49,7 @@ export class InMemoryGraphRepository implements GraphRepository {
   }
 
   async listUsers() {
-    return [...this.users.values()].map(this.toPublicUser);
+    return [...this.users.values()].map((user) => this.toPublicUser(user));
   }
 
   async createMaterial(input: CreateMaterialInput) {
@@ -73,11 +73,11 @@ export class InMemoryGraphRepository implements GraphRepository {
   }
 
   async listMaterialsForUser(userId: string) {
-    return [...this.materials.values()].filter((material) => material.ownerId === userId).map(this.stripReliability);
+    return [...this.materials.values()].filter((material) => material.ownerId === userId).map((material) => this.stripReliability(material));
   }
 
   async listAllMaterials() {
-    return [...this.materials.values()].map(this.stripReliability);
+    return [...this.materials.values()].map((material) => this.stripReliability(material));
   }
 
   async getMaterialForUser(materialId: string, userId: string, isAdmin: boolean) {
@@ -104,6 +104,11 @@ export class InMemoryGraphRepository implements GraphRepository {
   async deleteMaterial(materialId: string, userId: string, isAdmin: boolean) {
     const material = this.materials.get(materialId);
     if (!material || (!isAdmin && material.ownerId !== userId)) return false;
+    for (const snippet of this.snippets.values()) {
+      if (snippet.sourceMaterialId === materialId) {
+        this.snippets.delete(snippet.id);
+      }
+    }
     return this.materials.delete(materialId);
   }
 
@@ -134,20 +139,26 @@ export class InMemoryGraphRepository implements GraphRepository {
   }
 
   async listFeed(options: FeedOptions) {
-    const viewed = this.viewed.get(options.userId) ?? new Set<string>();
     return [...this.snippets.values()]
-      .filter((snippet) => snippet.isPublic && snippet.moderationStatus === "approved" && snippet.reliabilityScore >= 60)
-      .filter((snippet) => !options.subjects?.length || options.subjects.includes(snippet.subject))
-      .filter((snippet) => !viewed.has(snippet.id))
-      .sort((a, b) => b.confidenceScore + b.reliabilityScore - (a.confidenceScore + a.reliabilityScore))
+      .filter((snippet) => snippet.isPublic && snippet.moderationStatus === "approved")
+      .filter((snippet) => !snippet.sourceMaterialId || this.materials.has(snippet.sourceMaterialId))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
       .slice(0, options.limit)
-      .map(this.toPublicSnippet);
+      .map((snippet) => this.toPublicSnippet(snippet));
   }
 
   async getPublicSnippet(snippetId: string) {
     const snippet = this.snippets.get(snippetId);
     if (!snippet || !snippet.isPublic || snippet.moderationStatus !== "approved") return null;
+    if (snippet.sourceMaterialId && !this.materials.has(snippet.sourceMaterialId)) return null;
     return this.toPublicSnippet(snippet);
+  }
+
+  async getApprovedSnippetSourceMaterial(snippetId: string) {
+    const snippet = this.snippets.get(snippetId);
+    if (!snippet || !snippet.isPublic || snippet.moderationStatus !== "approved" || !snippet.sourceMaterialId) return null;
+    const material = this.materials.get(snippet.sourceMaterialId);
+    return material ? this.stripReliability(material) : null;
   }
 
   async listPendingSnippets() {
@@ -172,11 +183,11 @@ export class InMemoryGraphRepository implements GraphRepository {
     const ownMaterials = [...this.materials.values()]
       .filter((material) => !options.userId || material.ownerId === options.userId || material.isPublic)
       .filter((material) => [material.title, material.description, material.subject, material.tags.join(" ")].join(" ").toLowerCase().includes(query))
-      .map(this.stripReliability);
+      .map((material) => this.stripReliability(material));
     const publicSnippets = [...this.snippets.values()]
       .filter((snippet) => snippet.moderationStatus === "approved" && snippet.isPublic)
       .filter((snippet) => [snippet.title, snippet.summary, snippet.transcript, snippet.subject, snippet.tags.join(" ")].join(" ").toLowerCase().includes(query))
-      .map(this.toPublicSnippet);
+      .map((snippet) => this.toPublicSnippet(snippet));
     return [...ownMaterials, ...publicSnippets].slice(0, options.limit);
   }
 
@@ -213,6 +224,16 @@ export class InMemoryGraphRepository implements GraphRepository {
 
   private toPublicSnippet(snippet: SnippetAdminRecord): Snippet {
     const { reliabilityScore: _reliabilityScore, supportingSources: _supportingSources, conflictingSources: _conflictingSources, ...safeSnippet } = snippet;
-    return safeSnippet;
+    const sourceMaterial = safeSnippet.sourceMaterialId ? this.materials.get(safeSnippet.sourceMaterialId) : undefined;
+    return {
+      ...safeSnippet,
+      sourceMaterial: sourceMaterial
+        ? {
+            id: sourceMaterial.id,
+            title: sourceMaterial.title,
+            mediaType: sourceMaterial.mediaType
+          }
+        : undefined
+    };
   }
 }

@@ -1,14 +1,15 @@
-import { Heart, RefreshCw, Save } from "lucide-react";
+import { Eye, Heart, RefreshCw, Save } from "lucide-react";
 import type { Snippet } from "@shortlearn/shared";
 
 interface FeedPageProps {
   snippets: Snippet[];
   onRefresh: () => void;
+  onViewSource: (id: string) => void;
   onLike: (id: string) => void;
   onSave: (id: string) => void;
 }
 
-export const FeedPage = ({ snippets, onRefresh, onLike, onSave }: FeedPageProps) => (
+export const FeedPage = ({ snippets, onRefresh, onViewSource, onLike, onSave }: FeedPageProps) => (
   <section className="page-stack">
     <header className="page-header">
       <div>
@@ -29,8 +30,15 @@ export const FeedPage = ({ snippets, onRefresh, onLike, onSave }: FeedPageProps)
             <span className="eyebrow">{snippet.subject}</span>
             <h2>{snippet.title}</h2>
             <p>{snippet.summary}</p>
+            {snippet.sourceMaterial && <p className="source-line">Source: {snippet.sourceMaterial.title}</p>}
             <div className="tag-row">{snippet.tags.map((tag) => <span key={tag}>{tag}</span>)}</div>
             <div className="button-row">
+              {snippet.sourceMaterial && (
+                <button className="icon-text-button" onClick={() => onViewSource(snippet.id)}>
+                  <Eye aria-hidden="true" />
+                  <span>View source</span>
+                </button>
+              )}
               <button className="icon-text-button" onClick={() => onLike(snippet.id)}>
                 <Heart aria-hidden="true" />
                 <span>Like</span>

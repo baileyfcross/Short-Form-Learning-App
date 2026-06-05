@@ -59,6 +59,11 @@ export class ApiClient {
     return this.request<Snippet[]>(`/feed${query}`);
   }
 
+  async viewFeedSource(snippetId: string) {
+    const { blob } = await this.blobRequest(`/feed/${snippetId}/source`);
+    return URL.createObjectURL(blob);
+  }
+
   async like(snippetId: string) {
     return this.request<{ ok: true }>(`/feed/${snippetId}/like`, { method: "POST" });
   }

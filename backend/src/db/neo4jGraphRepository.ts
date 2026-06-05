@@ -100,6 +100,9 @@ export class Neo4jGraphRepository implements GraphRepository {
        OPTIONAL MATCH (:User {id: $userId})-[:USER_UPLOADED_MATERIAL]->(m)
        WITH m, count(*) > 0 AS owns
        WHERE $isAdmin OR owns
+       OPTIONAL MATCH (m)-[:MATERIAL_GENERATED_SNIPPET]->(s:Snippet)
+       DETACH DELETE s
+       WITH m
        DETACH DELETE m
        RETURN count(*) AS deleted`,
       { materialId, userId, isAdmin }
@@ -127,24 +130,53 @@ export class Neo4jGraphRepository implements GraphRepository {
 
   async listFeed(options: FeedOptions) {
     const result = await this.driver.executeQuery(
-      `MATCH (s:Snippet)
-       WHERE s.isPublic = true AND s.moderationStatus = 'approved' AND s.reliabilityScore >= 60
-       AND (size($subjects) = 0 OR s.subject IN $subjects)
-       AND NOT EXISTS { MATCH (:User {id: $userId})-[:USER_VIEWED_SNIPPET]->(s) }
-       RETURN s
-       ORDER BY rand(), s.confidenceScore DESC
+      `MATCH (m:Material)-[:MATERIAL_GENERATED_SNIPPET]->(s:Snippet)
+       WHERE s.isPublic = true AND s.moderationStatus = 'approved'
+       RETURN s, m
+       ORDER BY s.createdAt DESC
        LIMIT $limit`,
-      { userId: options.userId, subjects: options.subjects ?? [], limit: options.limit }
+      { limit: options.limit }
     );
-    return result.records.map((record) => this.toPublicSnippet(this.toAdminSnippet(this.node<SnippetAdminRecord>(record.get("s")))));
+    return result.records.map((record) => {
+      const snippet = this.toPublicSnippet(this.toAdminSnippet(this.node<SnippetAdminRecord>(record.get("s"))));
+      const material = this.stripReliability(this.node<Material & { reliabilityScore: number }>(record.get("m")));
+      return {
+        ...snippet,
+        sourceMaterial: {
+          id: material.id,
+          title: material.title,
+          mediaType: material.mediaType
+        }
+      };
+    });
   }
 
   async getPublicSnippet(snippetId: string) {
     const result = await this.driver.executeQuery(
-      "MATCH (s:Snippet {id: $snippetId}) WHERE s.isPublic = true AND s.moderationStatus = 'approved' RETURN s LIMIT 1",
+      "MATCH (m:Material)-[:MATERIAL_GENERATED_SNIPPET]->(s:Snippet {id: $snippetId}) WHERE s.isPublic = true AND s.moderationStatus = 'approved' RETURN s, m LIMIT 1",
       { snippetId }
     );
-    return result.records[0] ? this.toPublicSnippet(this.toAdminSnippet(this.node<SnippetAdminRecord>(result.records[0].get("s")))) : null;
+    if (!result.records[0]) return null;
+    const snippet = this.toPublicSnippet(this.toAdminSnippet(this.node<SnippetAdminRecord>(result.records[0].get("s"))));
+    const material = this.stripReliability(this.node<Material & { reliabilityScore: number }>(result.records[0].get("m")));
+    return {
+      ...snippet,
+      sourceMaterial: {
+        id: material.id,
+        title: material.title,
+        mediaType: material.mediaType
+      }
+    };
+  }
+
+  async getApprovedSnippetSourceMaterial(snippetId: string) {
+    const result = await this.driver.executeQuery(
+      `MATCH (m:Material)-[:MATERIAL_GENERATED_SNIPPET]->(s:Snippet {id: $snippetId})
+       WHERE s.isPublic = true AND s.moderationStatus = 'approved'
+       RETURN m LIMIT 1`,
+      { snippetId }
+    );
+    return result.records[0] ? this.stripReliability(this.node<Material & { reliabilityScore: number }>(result.records[0].get("m"))) : null;
   }
 
   async listPendingSnippets() {

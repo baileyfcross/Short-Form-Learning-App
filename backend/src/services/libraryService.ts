@@ -64,6 +64,16 @@ export class LibraryService {
 
   async getFileAccess(id: string, userId: string, isAdmin: boolean) {
     const material = await this.get(id, userId, isAdmin);
+    return this.fileAccessForMaterial(material);
+  }
+
+  async getPublicSnippetSourceFileAccess(snippetId: string) {
+    const material = await graphRepository.getApprovedSnippetSourceMaterial(snippetId);
+    if (!material) throw notFound("Approved source material");
+    return this.fileAccessForMaterial(material);
+  }
+
+  private fileAccessForMaterial(material: Material) {
     if (!objectStorageService.resolveObjectPath) {
       throw new AppError(501, "Direct local file access is not available for this storage provider");
     }
@@ -86,8 +96,10 @@ export class LibraryService {
   }
 
   async remove(id: string, userId: string, isAdmin: boolean) {
+    const material = await this.get(id, userId, isAdmin);
     const deleted = await graphRepository.deleteMaterial(id, userId, isAdmin);
     if (!deleted) throw notFound("Material");
+    await objectStorageService.deleteObject(material.objectKey);
   }
 
   private filenameForMaterial(material: Material) {

@@ -3,7 +3,7 @@ import { AppError, notFound } from "../utils/errors.js";
 
 export class FeedService {
   async getFeed(userId: string, subjects: string[] = [], limit = 20) {
-    return graphRepository.listFeed({ userId, subjects, limit });
+    return graphRepository.listFeed({ userId, subjects: [], limit });
   }
 
   async getSnippet(id: string) {

@@ -24,6 +24,7 @@ export interface GraphRepository {
   createSnippet(input: CreateSnippetInput): Promise<SnippetAdminRecord>;
   listFeed(options: FeedOptions): Promise<Snippet[]>;
   getPublicSnippet(snippetId: string): Promise<Snippet | null>;
+  getApprovedSnippetSourceMaterial(snippetId: string): Promise<Material | null>;
   listPendingSnippets(): Promise<AdminSnippet[]>;
   moderateSnippet(snippetId: string, status: "approved" | "rejected", reviewerId: string): Promise<AdminSnippet | null>;
   setSourceReliability(sourceId: string, score: number): Promise<void>;

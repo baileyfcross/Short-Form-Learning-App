@@ -1,4 +1,5 @@
 import { feedService } from "../services/feedService.js";
+import { libraryService } from "../services/libraryService.js";
 import { asyncHandler } from "../middleware/asyncHandler.js";
 
 const subjectsFromQuery = (subjects: unknown) =>
@@ -11,6 +12,13 @@ export const getFeed = asyncHandler(async (req, res) => {
 
 export const getSnippet = asyncHandler(async (req, res) => {
   res.json(await feedService.getSnippet(req.params.snippetId));
+});
+
+export const viewSnippetSource = asyncHandler(async (req, res) => {
+  const file = await libraryService.getPublicSnippetSourceFileAccess(req.params.snippetId);
+  res.setHeader("Content-Type", file.contentType);
+  res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(file.filename)}"`);
+  res.sendFile(file.filePath);
 });
 
 export const likeSnippet = asyncHandler(async (req, res) => {

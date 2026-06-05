@@ -7,7 +7,7 @@
     "shared"
   ],
   "scripts": {
-    "dev": "concurrently -n backend,frontend -c cyan,green \"cross-env DEV_LOGIN_ENABLED=true SEED_DEMO_USERS=true npm run dev:backend\" \"cross-env VITE_DEV_LOGIN_ENABLED=true npm run dev:frontend\"",
+    "dev": "npm run storage:clear && concurrently -n backend,frontend -c cyan,green \"cross-env DEV_LOGIN_ENABLED=true SEED_DEMO_USERS=true npm run dev:backend\" \"cross-env VITE_DEV_LOGIN_ENABLED=true npm run dev:frontend\"",
     "dev:local-auth": "npm run dev",
     "dev:no-local-auth": "concurrently -n backend,frontend -c cyan,green \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:all": "npm run dev",
@@ -15,6 +15,8 @@
     "dev:frontend": "npm run dev --workspace frontend",
     "stop": "node scripts/stop-local-servers.mjs",
     "stop:dry-run": "node scripts/stop-local-servers.mjs --dry-run",
+    "storage:clear": "node scripts/clear-local-storage.mjs",
+    "storage:clear:dry-run": "node scripts/clear-local-storage.mjs --dry-run",
     "preview:frontend": "npm run preview --workspace frontend",
     "seed": "npm run seed --workspace backend",
     "build": "npm run build --workspaces",

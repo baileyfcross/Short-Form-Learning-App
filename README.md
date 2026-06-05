@@ -24,6 +24,18 @@ The backend defaults to `GRAPH_MODE=memory`, so it can run without Neo4j for fir
 
 `npm run dev` starts both the backend and frontend together with local demo auth enabled. You can still run either side alone with `npm run dev:backend` or `npm run dev:frontend`.
 
+`npm run dev` also clears the local backend file storage folder before starting. To clear it manually:
+
+```bash
+npm run storage:clear
+```
+
+To preview the folder that would be cleared:
+
+```bash
+npm run storage:clear:dry-run
+```
+
 To stop local app servers on ports `4000`, `4173`, and `5173`:
 
 ```bash
@@ -98,7 +110,10 @@ Admin:
 
 - Uploaded files are stored by object key; Neo4j stores metadata and relationships only.
 - Upload owners can view and download their own full materials immediately from their personal library.
-- Public feed content only comes from approved snippets.
+- Public feed content only comes from approved snippets generated from user library uploads.
+- Feed users can view the approved snippet and its source document after approval.
+- Approved feed items are visible to every role. User role, subject preference, viewed history, and internal reliability score do not hide approved feed items.
+- Deleting an uploaded material also removes generated snippets for that material from the public feed and deletes the locally stored file.
 - Moderation is only required before other users can see public snippets or facts; it does not block the uploader's private access.
 - The current processing pipeline generates a pending snippet from uploaded public material using local parsers and graceful fallbacks.
 - Selecting a file on the upload screen inspects local metadata and pre-fills title, description, subject, and tags while keeping every field editable.
