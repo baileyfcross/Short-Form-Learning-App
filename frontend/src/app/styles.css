@@ -282,6 +282,11 @@ td:first-child {
   gap: 8px;
 }
 
+.table-actions {
+  display: flex;
+  gap: 8px;
+}
+
 .form-grid,
 .upload-form {
   display: grid;

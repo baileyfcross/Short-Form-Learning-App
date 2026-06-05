@@ -82,7 +82,7 @@ export class InMemoryGraphRepository implements GraphRepository {
 
   async getMaterialForUser(materialId: string, userId: string, isAdmin: boolean) {
     const material = this.materials.get(materialId);
-    if (!material || (!isAdmin && material.ownerId !== userId && !material.isPublic)) return null;
+    if (!material || (!isAdmin && material.ownerId !== userId)) return null;
     return this.stripReliability(material);
   }
 

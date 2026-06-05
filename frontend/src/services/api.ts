@@ -29,6 +29,23 @@ export class ApiClient {
     return this.request<Material[]>("/library");
   }
 
+  async viewMaterial(materialId: string) {
+    const { blob } = await this.blobRequest(`/library/${materialId}/view`);
+    return URL.createObjectURL(blob);
+  }
+
+  async downloadMaterial(materialId: string) {
+    const { blob, filename } = await this.blobRequest(`/library/${materialId}/download`);
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename ?? "material";
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
+  }
+
   async uploadMaterial(form: FormData) {
     return this.request<Material>("/library/upload", { method: "POST", body: form, omitJsonHeader: true });
   }
@@ -71,6 +88,29 @@ export class ApiClient {
   }
 
   private async request<T>(path: string, init: RequestInit & { omitJsonHeader?: boolean; devUserEmail?: string } = {}) {
+    const response = await this.fetchWithAuth(path, init);
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({ message: response.statusText }));
+      throw new Error(body.message ?? "Request failed");
+    }
+    if (response.status === 204) return undefined as T;
+    return response.json() as Promise<T>;
+  }
+
+  private async blobRequest(path: string) {
+    const response = await this.fetchWithAuth(path);
+    if (!response.ok) {
+      const body = await response.json().catch(() => ({ message: response.statusText }));
+      throw new Error(body.message ?? "Request failed");
+    }
+
+    return {
+      blob: await response.blob(),
+      filename: this.filenameFromDisposition(response.headers.get("content-disposition"))
+    };
+  }
+
+  private async fetchWithAuth(path: string, init: RequestInit & { omitJsonHeader?: boolean; devUserEmail?: string } = {}) {
     const token = this.getToken();
     const devUserEmail = init.devUserEmail ?? this.getDevUserEmail();
     const headers = new Headers(init.headers);
@@ -78,12 +118,11 @@ export class ApiClient {
     if (token) headers.set("Authorization", `Bearer ${token}`);
     if (devUserEmail) headers.set("X-ShortLearn-Dev-User", devUserEmail);
 
-    const response = await fetch(`${API_BASE_URL}${path}`, { ...init, headers });
-    if (!response.ok) {
-      const body = await response.json().catch(() => ({ message: response.statusText }));
-      throw new Error(body.message ?? "Request failed");
-    }
-    if (response.status === 204) return undefined as T;
-    return response.json() as Promise<T>;
+    return fetch(`${API_BASE_URL}${path}`, { ...init, headers });
+  }
+
+  private filenameFromDisposition(disposition: string | null) {
+    const match = disposition?.match(/filename="?([^"]+)"?/i);
+    return match?.[1] ? decodeURIComponent(match[1]) : undefined;
   }
 }

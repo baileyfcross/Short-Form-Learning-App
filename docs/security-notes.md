@@ -9,6 +9,7 @@
 - Upload and auth endpoints have rate limits.
 - Helmet and constrained CORS are enabled.
 - Full materials are private by default; public feed entries must be approved snippets.
+- Material owners can view and download their own uploaded files without moderation. Full uploaded files are not exposed to other users through public feed approval.
 - Malware scanning is designed as a future upload pipeline step and should be added before public production use.
 - Production deployments should terminate TLS at the edge or service mesh and only expose HTTPS.
 

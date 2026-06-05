@@ -38,6 +38,18 @@ export const getMaterial = asyncHandler(async (req, res) => {
   res.json(await libraryService.get(req.params.id, req.user!.id, isAdmin(req)));
 });
 
+export const viewMaterialFile = asyncHandler(async (req, res) => {
+  const file = await libraryService.getFileAccess(req.params.id, req.user!.id, isAdmin(req));
+  res.setHeader("Content-Type", file.contentType);
+  res.setHeader("Content-Disposition", `inline; filename="${encodeURIComponent(file.filename)}"`);
+  res.sendFile(file.filePath);
+});
+
+export const downloadMaterialFile = asyncHandler(async (req, res) => {
+  const file = await libraryService.getFileAccess(req.params.id, req.user!.id, isAdmin(req));
+  res.download(file.filePath, file.filename);
+});
+
 export const patchMaterial = asyncHandler(async (req, res) => {
   res.json(await libraryService.patch(req.params.id, req.user!.id, req.body));
 });

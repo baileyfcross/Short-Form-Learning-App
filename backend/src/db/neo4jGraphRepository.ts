@@ -77,7 +77,7 @@ export class Neo4jGraphRepository implements GraphRepository {
       `MATCH (m:Material {id: $materialId})
        OPTIONAL MATCH (:User {id: $userId})-[:USER_UPLOADED_MATERIAL]->(m)
        WITH m, count(*) > 0 AS owns
-       WHERE $isAdmin OR owns OR m.isPublic = true
+       WHERE $isAdmin OR owns
        RETURN m LIMIT 1`,
       { materialId, userId, isAdmin }
     );

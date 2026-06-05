@@ -68,7 +68,17 @@ export const App = () => {
   return (
     <Shell user={session.user} view={view} setView={(nextView) => void switchView(nextView)} onLogout={logout}>
       {view === "feed" && <FeedPage snippets={feed} onRefresh={() => void refreshFeed()} onLike={(id) => void api.like(id)} onSave={(id) => void api.save(id)} />}
-      {view === "library" && <LibraryPage materials={library} />}
+      {view === "library" && (
+        <LibraryPage
+          materials={library}
+          onView={async (material) => {
+            const url = await api.viewMaterial(material.id);
+            window.open(url, "_blank", "noopener,noreferrer");
+            window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
+          }}
+          onDownload={(material) => void api.downloadMaterial(material.id)}
+        />
+      )}
       {view === "upload" && (
         <UploadPage
           onUpload={async (form) => {

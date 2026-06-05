@@ -97,7 +97,9 @@ Admin:
 ## Notes
 
 - Uploaded files are stored by object key; Neo4j stores metadata and relationships only.
+- Upload owners can view and download their own full materials immediately from their personal library.
 - Public feed content only comes from approved snippets.
+- Moderation is only required before other users can see public snippets or facts; it does not block the uploader's private access.
 - The current processing pipeline generates a pending snippet from uploaded public material using local parsers and graceful fallbacks.
 - Selecting a file on the upload screen inspects local metadata and pre-fills title, description, subject, and tags while keeping every field editable.
 - See [local processing](docs/local-processing.md), [Neo4j schema](docs/neo4j-schema.md), [security notes](docs/security-notes.md), and [production TODO](docs/production-todo.md).

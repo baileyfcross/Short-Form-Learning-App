@@ -1,7 +1,15 @@
-import { FileText } from "lucide-react";
+import { Download, Eye, FileText } from "lucide-react";
 import type { Material } from "@shortlearn/shared";
 
-export const LibraryPage = ({ materials }: { materials: Material[] }) => (
+export const LibraryPage = ({
+  materials,
+  onView,
+  onDownload
+}: {
+  materials: Material[];
+  onView: (material: Material) => void;
+  onDownload: (material: Material) => void;
+}) => (
   <section className="page-stack">
     <header className="page-header">
       <div>
@@ -18,6 +26,7 @@ export const LibraryPage = ({ materials }: { materials: Material[] }) => (
             <th>Subject</th>
             <th>Status</th>
             <th>Visibility</th>
+            <th>Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -31,6 +40,16 @@ export const LibraryPage = ({ materials }: { materials: Material[] }) => (
               <td>{material.subject}</td>
               <td>{material.processingStatus}</td>
               <td>{material.isPublic ? "snippet candidates" : "private"}</td>
+              <td>
+                <div className="table-actions">
+                  <button className="icon-button" title="View" aria-label={`View ${material.title}`} onClick={() => onView(material)}>
+                    <Eye aria-hidden="true" />
+                  </button>
+                  <button className="icon-button" title="Download" aria-label={`Download ${material.title}`} onClick={() => onDownload(material)}>
+                    <Download aria-hidden="true" />
+                  </button>
+                </div>
+              </td>
             </tr>
           ))}
         </tbody>

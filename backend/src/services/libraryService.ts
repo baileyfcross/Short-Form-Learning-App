@@ -1,5 +1,6 @@
 import { Readable } from "node:stream";
-import type { Material, MediaType } from "@shortlearn/shared";
+import { existsSync } from "node:fs";
+import type { Material } from "@shortlearn/shared";
 import { graphRepository } from "../db/index.js";
 import { AppError, notFound } from "../utils/errors.js";
 import { mediaProcessingService } from "./mediaProcessingService.js";
@@ -61,6 +62,23 @@ export class LibraryService {
     return material;
   }
 
+  async getFileAccess(id: string, userId: string, isAdmin: boolean) {
+    const material = await this.get(id, userId, isAdmin);
+    if (!objectStorageService.resolveObjectPath) {
+      throw new AppError(501, "Direct local file access is not available for this storage provider");
+    }
+
+    const filePath = objectStorageService.resolveObjectPath(material.objectKey);
+    if (!existsSync(filePath)) throw notFound("Stored file");
+
+    return {
+      material,
+      filePath,
+      filename: this.filenameForMaterial(material),
+      contentType: this.contentTypeForMaterial(material)
+    };
+  }
+
   async patch(id: string, userId: string, patch: Partial<Material>) {
     const material = await graphRepository.patchMaterial(id, userId, patch);
     if (!material) throw notFound("Material");
@@ -72,6 +90,20 @@ export class LibraryService {
     if (!deleted) throw notFound("Material");
   }
 
+  private filenameForMaterial(material: Material) {
+    const safeTitle = material.title.replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120) || "material";
+    const extension = material.objectKey.split(".").pop();
+    return extension && extension.length <= 8 ? `${safeTitle}.${extension}` : safeTitle;
+  }
+
+  private contentTypeForMaterial(material: Material) {
+    if (material.mediaType === "pdf") return "application/pdf";
+    if (material.mediaType === "audio") return "audio/mpeg";
+    if (material.mediaType === "video") return "video/mp4";
+    if (material.mediaType === "image") return "image/*";
+    if (material.mediaType === "text") return "text/plain; charset=utf-8";
+    return "application/octet-stream";
+  }
 }
 
 export const libraryService = new LibraryService();
