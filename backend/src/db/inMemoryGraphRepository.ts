@@ -69,6 +69,7 @@ export class InMemoryGraphRepository implements GraphRepository {
       contentType: input.contentType,
       isPublic: input.isPublic ?? false,
       processingStatus: "queued",
+      moderationStatus: input.isPublic ? "pending" : "private",
       uploadDate: new Date().toISOString(),
       reliabilityScore: 50
     };
@@ -109,6 +110,9 @@ export class InMemoryGraphRepository implements GraphRepository {
       isPublic: patch.isPublic
     };
     const updated = { ...material, ...Object.fromEntries(Object.entries(allowedPatch).filter(([, value]) => value !== undefined)) };
+    if (patch.isPublic !== undefined) {
+      updated.moderationStatus = patch.isPublic ? "pending" : "private";
+    }
     this.materials.set(materialId, updated);
     if (patch.isPublic !== undefined) {
       for (const snippet of this.snippets.values()) {
@@ -209,6 +213,12 @@ export class InMemoryGraphRepository implements GraphRepository {
     if (!snippet) return null;
     const updated: SnippetAdminRecord = { ...snippet, moderationStatus: status, isPublic: status === "approved" };
     this.snippets.set(snippetId, updated);
+    if (snippet.sourceMaterialId) {
+      const material = this.materials.get(snippet.sourceMaterialId);
+      if (material) {
+        this.materials.set(material.id, { ...material, moderationStatus: status, isPublic: status === "approved" });
+      }
+    }
     return this.toAdminSnippet(updated);
   }
 

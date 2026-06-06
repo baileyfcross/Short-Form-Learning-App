@@ -22,8 +22,11 @@ export const initializeNeo4jDatabase = async () => {
     "CREATE CONSTRAINT material_id IF NOT EXISTS FOR (m:Material) REQUIRE m.id IS UNIQUE",
     "CREATE INDEX material_owner_file_hash IF NOT EXISTS FOR (m:Material) ON (m.ownerId, m.fileHash)",
     "MATCH (u:User)-[:USER_UPLOADED_MATERIAL]->(m:Material) WHERE m.ownerId IS NULL SET m.ownerId = u.id",
+    "MATCH (m:Material) WHERE m.moderationStatus IS NULL SET m.moderationStatus = CASE WHEN coalesce(m.isPublic, false) THEN 'pending' ELSE 'private' END",
     "MATCH (u:User)-[:USER_UPLOADED_SNIPPET]->(s:Snippet) WHERE s.uploaderId IS NULL SET s.uploaderId = u.id",
     "MATCH (m:Material)-[:MATERIAL_GENERATED_SNIPPET]->(s:Snippet) WHERE s.sourceMaterialId IS NULL SET s.sourceMaterialId = m.id",
+    "MATCH (m:Material)-[:MATERIAL_GENERATED_SNIPPET]->(s:Snippet {moderationStatus: 'approved'}) WHERE coalesce(m.isPublic, false) SET m.moderationStatus = 'approved'",
+    "MATCH (m:Material)-[:MATERIAL_GENERATED_SNIPPET]->(s:Snippet {moderationStatus: 'rejected'}) WHERE coalesce(m.isPublic, false) AND m.moderationStatus <> 'approved' SET m.moderationStatus = 'rejected'",
     "MATCH (s:Snippet) WHERE s.sourceMaterialId IS NOT NULL MATCH (m:Material {id: s.sourceMaterialId}) MERGE (m)-[:MATERIAL_GENERATED_SNIPPET]->(s)"
   ];
 

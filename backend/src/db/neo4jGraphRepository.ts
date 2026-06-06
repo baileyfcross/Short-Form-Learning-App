@@ -52,7 +52,9 @@ export class Neo4jGraphRepository implements GraphRepository {
         id: randomUUID(), ownerId: $ownerId, title: $title, description: $description, mediaType: $mediaType, subject: $subject,
         tags: $tags, objectKey: $objectKey, sourceUrl: $sourceUrl, originalName: $originalName,
         fileHash: $fileHash, fileSize: $fileSize, contentType: $contentType, isPublic: coalesce($isPublic, false),
-        processingStatus: 'queued', uploadDate: datetime(), reliabilityScore: 50
+        processingStatus: 'queued',
+        moderationStatus: CASE WHEN coalesce($isPublic, false) THEN 'pending' ELSE 'private' END,
+        uploadDate: datetime(), reliabilityScore: 50
        })
        CREATE (u)-[:USER_UPLOADED_MATERIAL]->(m)
        RETURN m`,
@@ -108,6 +110,12 @@ export class Neo4jGraphRepository implements GraphRepository {
        )
        FOREACH (_ IN CASE WHEN $isPublic = true AND s.moderationStatus = 'private' THEN [1] ELSE [] END |
          SET s.moderationStatus = 'pending', s.isPublic = true
+       )
+       FOREACH (_ IN CASE WHEN $isPublic = false THEN [1] ELSE [] END |
+         SET m.moderationStatus = 'private'
+       )
+       FOREACH (_ IN CASE WHEN $isPublic = true THEN [1] ELSE [] END |
+         SET m.moderationStatus = 'pending'
        )
        RETURN m`,
       { materialId, userId, patch, isPublic: patch.isPublic ?? null }
@@ -264,6 +272,9 @@ export class Neo4jGraphRepository implements GraphRepository {
        OPTIONAL MATCH (relMaterial:Material)-[:MATERIAL_GENERATED_SNIPPET]->(s)
        OPTIONAL MATCH (idMaterial:Material {id: s.sourceMaterialId})
        WITH s, coalesce(relMaterial, idMaterial) AS m
+       FOREACH (_ IN CASE WHEN m IS NULL THEN [] ELSE [1] END |
+         SET m.moderationStatus = $status, m.isPublic = CASE WHEN $status = 'approved' THEN true ELSE false END
+       )
        RETURN s, m`,
       { snippetId, status, reviewerId }
     );

@@ -29,6 +29,7 @@ export interface Material {
   contentType?: string;
   isPublic: boolean;
   processingStatus: ProcessingStatus;
+  moderationStatus: ModerationStatus;
   extractedText?: string;
   uploadDate: string;
 }

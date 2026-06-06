@@ -1,6 +1,11 @@
 import { Download, Eye, FileText, Globe2, Lock, Trash2 } from "lucide-react";
 import type { Material } from "@shortlearn/shared";
 
+const statusLabel = (material: Material) => {
+  const status = material.moderationStatus ?? (material.isPublic ? material.processingStatus : "private");
+  return status.charAt(0).toUpperCase() + status.slice(1);
+};
+
 export const LibraryPage = ({
   materials,
   onView,
@@ -42,7 +47,7 @@ export const LibraryPage = ({
               </td>
               <td>{material.mediaType}</td>
               <td>{material.subject}</td>
-              <td>{material.processingStatus}</td>
+              <td>{statusLabel(material)}</td>
               <td>
                 <div className="visibility-control" aria-label={`Visibility for ${material.title}`}>
                   <button
