@@ -22,9 +22,32 @@ npm run dev
 
 The backend defaults to `GRAPH_MODE=memory`, so it can run without Neo4j for first local testing. Set `GRAPH_MODE=neo4j` and configure `NEO4J_URI`, `NEO4J_USERNAME`, and `NEO4J_PASSWORD` to use a real database.
 
-`npm run dev` starts both the backend and frontend together with local demo auth enabled. You can still run either side alone with `npm run dev:backend` or `npm run dev:frontend`.
+To run Neo4j locally in Docker:
 
-`npm run dev` also clears the local backend file storage folder before starting. To clear it manually:
+```bash
+npm run db:up
+```
+
+Then set these values in `.env`:
+
+```bash
+GRAPH_MODE=neo4j
+NEO4J_URI=neo4j://localhost:7687
+NEO4J_USERNAME=neo4j
+NEO4J_PASSWORD=password
+```
+
+Neo4j Browser will be available at `http://localhost:7474`. To stop the database while keeping its volume, run `npm run db:stop`. To stop and remove the container while keeping the database volume, run `npm run db:down`. To remove the database volume and start clean, run `docker compose down -v`.
+
+In development, the backend exposes `GET /api/dev/database/status` to check the Docker-backed Neo4j connection. When the backend starts, it calls that endpoint once and prints the JSON status in the terminal. If Neo4j is not running, startup continues and the database initialization step is skipped with a warning.
+
+`npm run dev` starts both the backend and frontend together with local demo auth enabled. It does not start or replace the Docker database. Start the Neo4j container yourself with `npm run db:up` when you want it running, then keep using the same container across backend restarts.
+
+The backend runs with `GRAPH_MODE=neo4j` during normal dev, so users, uploaded material metadata, moderation decisions, and public feed snippets persist in the database you started. Uploaded file bytes stay in `backend/storage` under the original owner's user id, and repeated uploads of the same file by the same owner reuse the existing material record instead of creating another stored copy.
+
+Use `npm run dev:memory` if you want the old reset-on-start local demo mode. You can still run either side alone with `npm run dev:backend` or `npm run dev:frontend`.
+
+Normal `npm run dev` keeps the local backend file storage folder. To clear it manually:
 
 ```bash
 npm run storage:clear

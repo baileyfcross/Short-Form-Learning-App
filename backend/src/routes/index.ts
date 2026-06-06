@@ -4,6 +4,8 @@ import { authRoutes } from "./authRoutes.js";
 import { feedRoutes } from "./feedRoutes.js";
 import { libraryRoutes } from "./libraryRoutes.js";
 import { searchRoutes } from "./searchRoutes.js";
+import { env } from "../config/env.js";
+import { devRoutes } from "./devRoutes.js";
 
 export const apiRoutes = Router();
 
@@ -13,3 +15,7 @@ apiRoutes.use("/library", libraryRoutes);
 apiRoutes.use("/feed", feedRoutes);
 apiRoutes.use("/search", searchRoutes);
 apiRoutes.use("/admin", adminRoutes);
+
+if (env.NODE_ENV === "development") {
+  apiRoutes.use("/dev", devRoutes);
+}

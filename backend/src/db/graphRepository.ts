@@ -16,6 +16,7 @@ export interface GraphRepository {
   findUserById(id: string): Promise<StoredUser | null>;
   listUsers(): Promise<UserPublic[]>;
   createMaterial(input: CreateMaterialInput): Promise<Material>;
+  findMaterialByOwnerAndFileHash(ownerId: string, fileHash: string): Promise<Material | null>;
   listMaterialsForUser(userId: string): Promise<Material[]>;
   listAllMaterials(): Promise<Material[]>;
   getMaterialForUser(materialId: string, userId: string, isAdmin: boolean): Promise<Material | null>;

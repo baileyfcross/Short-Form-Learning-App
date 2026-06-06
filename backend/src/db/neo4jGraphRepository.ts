@@ -1,4 +1,5 @@
 import type { AdminSnippet, Material, Snippet, UserPublic } from "@shortlearn/shared";
+import neo4j from "neo4j-driver";
 import type {
   CreateMaterialInput,
   CreateSnippetInput,
@@ -48,8 +49,9 @@ export class Neo4jGraphRepository implements GraphRepository {
     const result = await this.driver.executeQuery(
       `MATCH (u:User {id: $ownerId})
        CREATE (m:Material {
-        id: randomUUID(), title: $title, description: $description, mediaType: $mediaType, subject: $subject,
-        tags: $tags, objectKey: $objectKey, sourceUrl: $sourceUrl, isPublic: coalesce($isPublic, false),
+        id: randomUUID(), ownerId: $ownerId, title: $title, description: $description, mediaType: $mediaType, subject: $subject,
+        tags: $tags, objectKey: $objectKey, sourceUrl: $sourceUrl, originalName: $originalName,
+        fileHash: $fileHash, fileSize: $fileSize, contentType: $contentType, isPublic: coalesce($isPublic, false),
         processingStatus: 'queued', uploadDate: datetime(), reliabilityScore: 50
        })
        CREATE (u)-[:USER_UPLOADED_MATERIAL]->(m)
@@ -57,6 +59,17 @@ export class Neo4jGraphRepository implements GraphRepository {
       input
     );
     return this.stripReliability(this.node<Material & { reliabilityScore: number }>(result.records[0].get("m")));
+  }
+
+  async findMaterialByOwnerAndFileHash(ownerId: string, fileHash: string) {
+    const result = await this.driver.executeQuery(
+      `MATCH (:User {id: $ownerId})-[:USER_UPLOADED_MATERIAL]->(m:Material {fileHash: $fileHash})
+       RETURN m
+       ORDER BY m.uploadDate ASC
+       LIMIT 1`,
+      { ownerId, fileHash }
+    );
+    return result.records[0] ? this.stripReliability(this.node<Material & { reliabilityScore: number }>(result.records[0].get("m"))) : null;
   }
 
   async listMaterialsForUser(userId: string) {
@@ -123,7 +136,8 @@ export class Neo4jGraphRepository implements GraphRepository {
       `MATCH (u:User {id: $uploaderId})
        OPTIONAL MATCH (m:Material {id: $sourceMaterialId})
        CREATE (s:Snippet {
-        id: randomUUID(), title: $title, subject: $subject, tags: $tags, summary: $summary, transcript: $transcript,
+        id: randomUUID(), sourceMaterialId: $sourceMaterialId, uploaderId: $uploaderId,
+        title: $title, subject: $subject, tags: $tags, summary: $summary, transcript: $transcript,
         contentType: $contentType, objectKey: $objectKey, citation: $citation, confidenceScore: $confidenceScore,
         reliabilityScore: $reliabilityScore, moderationStatus: CASE WHEN $isPublic THEN 'pending' ELSE 'private' END,
         verificationStatus: 'unverified', isPublic: $isPublic, createdAt: datetime()
@@ -138,12 +152,16 @@ export class Neo4jGraphRepository implements GraphRepository {
 
   async listFeed(options: FeedOptions) {
     const result = await this.driver.executeQuery(
-      `MATCH (m:Material)-[:MATERIAL_GENERATED_SNIPPET]->(s:Snippet)
+      `MATCH (s:Snippet)
        WHERE s.isPublic = true AND s.moderationStatus = 'approved'
+       OPTIONAL MATCH (relMaterial:Material)-[:MATERIAL_GENERATED_SNIPPET]->(s)
+       OPTIONAL MATCH (idMaterial:Material {id: s.sourceMaterialId})
+       WITH s, coalesce(relMaterial, idMaterial) AS m
+       WHERE m IS NOT NULL
        RETURN s, m
        ORDER BY s.createdAt DESC
        LIMIT $limit`,
-      { limit: options.limit }
+      { limit: this.limit(options.limit) }
     );
     return result.records.map((record) => {
       const snippet = this.toPublicSnippet(this.toAdminSnippet(this.node<SnippetAdminRecord>(record.get("s"))));
@@ -161,7 +179,13 @@ export class Neo4jGraphRepository implements GraphRepository {
 
   async getPublicSnippet(snippetId: string) {
     const result = await this.driver.executeQuery(
-      "MATCH (m:Material)-[:MATERIAL_GENERATED_SNIPPET]->(s:Snippet {id: $snippetId}) WHERE s.isPublic = true AND s.moderationStatus = 'approved' RETURN s, m LIMIT 1",
+      `MATCH (s:Snippet {id: $snippetId})
+       WHERE s.isPublic = true AND s.moderationStatus = 'approved'
+       OPTIONAL MATCH (relMaterial:Material)-[:MATERIAL_GENERATED_SNIPPET]->(s)
+       OPTIONAL MATCH (idMaterial:Material {id: s.sourceMaterialId})
+       WITH s, coalesce(relMaterial, idMaterial) AS m
+       WHERE m IS NOT NULL
+       RETURN s, m LIMIT 1`,
       { snippetId }
     );
     if (!result.records[0]) return null;
@@ -179,8 +203,12 @@ export class Neo4jGraphRepository implements GraphRepository {
 
   async getApprovedSnippetSourceMaterial(snippetId: string) {
     const result = await this.driver.executeQuery(
-      `MATCH (m:Material)-[:MATERIAL_GENERATED_SNIPPET]->(s:Snippet {id: $snippetId})
+      `MATCH (s:Snippet {id: $snippetId})
        WHERE s.isPublic = true AND s.moderationStatus = 'approved'
+       OPTIONAL MATCH (relMaterial:Material)-[:MATERIAL_GENERATED_SNIPPET]->(s)
+       OPTIONAL MATCH (idMaterial:Material {id: s.sourceMaterialId})
+       WITH coalesce(relMaterial, idMaterial) AS m
+       WHERE m IS NOT NULL
        RETURN m LIMIT 1`,
       { snippetId }
     );
@@ -189,8 +217,12 @@ export class Neo4jGraphRepository implements GraphRepository {
 
   async getReviewSnippetSourceMaterial(snippetId: string) {
     const result = await this.driver.executeQuery(
-      `MATCH (m:Material)-[:MATERIAL_GENERATED_SNIPPET]->(s:Snippet {id: $snippetId})
+      `MATCH (s:Snippet {id: $snippetId})
        WHERE s.moderationStatus IN ['pending', 'approved']
+       OPTIONAL MATCH (relMaterial:Material)-[:MATERIAL_GENERATED_SNIPPET]->(s)
+       OPTIONAL MATCH (idMaterial:Material {id: s.sourceMaterialId})
+       WITH coalesce(relMaterial, idMaterial) AS m
+       WHERE m IS NOT NULL
        RETURN m LIMIT 1`,
       { snippetId }
     );
@@ -199,7 +231,11 @@ export class Neo4jGraphRepository implements GraphRepository {
 
   async listPendingSnippets() {
     const result = await this.driver.executeQuery(
-      `MATCH (m:Material)-[:MATERIAL_GENERATED_SNIPPET]->(s:Snippet {moderationStatus: 'pending'})
+      `MATCH (s:Snippet {moderationStatus: 'pending'})
+       OPTIONAL MATCH (relMaterial:Material)-[:MATERIAL_GENERATED_SNIPPET]->(s)
+       OPTIONAL MATCH (idMaterial:Material {id: s.sourceMaterialId})
+       WITH s, coalesce(relMaterial, idMaterial) AS m
+       WHERE m IS NOT NULL
        RETURN s, m ORDER BY s.createdAt ASC`
     );
     return result.records.map((record) => this.toAdminSnippetWithMaterial(record.get("s"), record.get("m")));
@@ -207,8 +243,12 @@ export class Neo4jGraphRepository implements GraphRepository {
 
   async listApprovedSnippets() {
     const result = await this.driver.executeQuery(
-      `MATCH (m:Material)-[:MATERIAL_GENERATED_SNIPPET]->(s:Snippet {moderationStatus: 'approved'})
+      `MATCH (s:Snippet {moderationStatus: 'approved'})
        WHERE s.isPublic = true
+       OPTIONAL MATCH (relMaterial:Material)-[:MATERIAL_GENERATED_SNIPPET]->(s)
+       OPTIONAL MATCH (idMaterial:Material {id: s.sourceMaterialId})
+       WITH s, coalesce(relMaterial, idMaterial) AS m
+       WHERE m IS NOT NULL
        RETURN s, m ORDER BY s.createdAt DESC`
     );
     return result.records.map((record) => this.toAdminSnippetWithMaterial(record.get("s"), record.get("m")));
@@ -220,10 +260,20 @@ export class Neo4jGraphRepository implements GraphRepository {
        SET s.moderationStatus = $status
        SET s.isPublic = CASE WHEN $status = 'approved' THEN true ELSE false END
        CREATE (admin)-[:ADMIN_REVIEWED_SNIPPET {status: $status, reviewedAt: datetime()}]->(s)
-       RETURN s`,
+       WITH s
+       OPTIONAL MATCH (relMaterial:Material)-[:MATERIAL_GENERATED_SNIPPET]->(s)
+       OPTIONAL MATCH (idMaterial:Material {id: s.sourceMaterialId})
+       WITH s, coalesce(relMaterial, idMaterial) AS m
+       RETURN s, m`,
       { snippetId, status, reviewerId }
     );
-    return result.records[0] ? this.toAdminSnippet(this.node<SnippetAdminRecord>(result.records[0].get("s"))) : null;
+    if (!result.records[0]) return null;
+    const material = result.records[0].get("m");
+    return material ? this.toAdminSnippetWithMaterial(result.records[0].get("s"), material) : this.toAdminSnippet(this.node<SnippetAdminRecord>(result.records[0].get("s")));
+  }
+
+  private limit(value: number) {
+    return neo4j.int(Math.max(1, Math.min(Math.trunc(value), 100)));
   }
 
   async setSourceReliability(sourceId: string, score: number) {
@@ -249,7 +299,7 @@ export class Neo4jGraphRepository implements GraphRepository {
        RETURN item
        ORDER BY sortDate DESC
        LIMIT $limit`,
-      { query: options.query, userId: options.userId ?? null, limit: options.limit }
+      { query: options.query, userId: options.userId ?? null, limit: this.limit(options.limit) }
     );
     return result.records.map((record) => {
       const node = record.get("item");

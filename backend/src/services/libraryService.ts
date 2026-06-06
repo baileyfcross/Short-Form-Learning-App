@@ -1,5 +1,6 @@
 import { Readable } from "node:stream";
 import { existsSync } from "node:fs";
+import { createHash } from "node:crypto";
 import type { Material } from "@shortlearn/shared";
 import { graphRepository } from "../db/index.js";
 import { AppError, notFound } from "../utils/errors.js";
@@ -29,6 +30,10 @@ export class LibraryService {
     };
     validateMaterialMetadata({ title: metadata.title, description: metadata.description, tags: metadata.tags });
 
+    const fileHash = createHash("sha256").update(input.file.buffer).digest("hex");
+    const existingMaterial = await graphRepository.findMaterialByOwnerAndFileHash(input.userId, fileHash);
+    if (existingMaterial) return existingMaterial;
+
     const stored = await objectStorageService.putObject({
       stream: Readable.from(input.file.buffer),
       originalName: input.file.originalname,
@@ -46,7 +51,11 @@ export class LibraryService {
       isPublic: input.isPublic,
       mediaType: detectMediaType(input.file.mimetype, input.file.originalname),
       objectKey: stored.objectKey,
-      sourceUrl: stored.url
+      sourceUrl: stored.url,
+      originalName: input.file.originalname,
+      fileHash,
+      fileSize: input.file.size,
+      contentType: input.file.mimetype
     });
 
     void mediaProcessingService.processMaterial(material).catch((error) => {

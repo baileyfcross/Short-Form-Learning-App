@@ -21,6 +21,10 @@ export interface CreateMaterialInput {
   tags: string[];
   objectKey: string;
   sourceUrl?: string;
+  originalName?: string;
+  fileHash?: string;
+  fileSize?: number;
+  contentType?: string;
   isPublic?: boolean;
 }
 

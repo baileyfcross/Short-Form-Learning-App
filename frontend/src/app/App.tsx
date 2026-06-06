@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { AdminSnippet, AuthResponse, Material, Snippet } from "@shortlearn/shared";
 import { AdminPage } from "../features/admin/AdminPage";
 import { AuthScreen } from "../features/auth/AuthScreen";
@@ -63,6 +63,13 @@ export const App = () => {
     if (nextView === "admin") await refreshAdmin();
   };
 
+  useEffect(() => {
+    if (!session) return;
+    if (view === "feed") void refreshFeed();
+    if (view === "library") void refreshLibrary();
+    if (view === "admin") void refreshAdmin();
+  }, [session?.user.id, view]);
+
   if (!session) return <AuthScreen api={api} onSession={saveSession} onDevSession={saveDevSession} />;
 
   return (
@@ -89,6 +96,12 @@ export const App = () => {
             window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
           }}
           onDownload={(material) => void api.downloadMaterial(material.id)}
+          onDelete={async (material) => {
+            if (!window.confirm(`Delete "${material.title}" from your library?`)) return;
+            await api.deleteMaterial(material.id);
+            await refreshLibrary();
+            await refreshFeed();
+          }}
           onVisibilityChange={async (material, isPublic) => {
             await api.updateMaterial(material.id, { isPublic });
             await refreshLibrary();

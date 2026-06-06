@@ -1,15 +1,17 @@
-import { Download, Eye, FileText, Globe2, Lock } from "lucide-react";
+import { Download, Eye, FileText, Globe2, Lock, Trash2 } from "lucide-react";
 import type { Material } from "@shortlearn/shared";
 
 export const LibraryPage = ({
   materials,
   onView,
   onDownload,
+  onDelete,
   onVisibilityChange
 }: {
   materials: Material[];
   onView: (material: Material) => void;
   onDownload: (material: Material) => void;
+  onDelete: (material: Material) => void;
   onVisibilityChange: (material: Material, isPublic: boolean) => void;
 }) => (
   <section className="page-stack">
@@ -74,6 +76,9 @@ export const LibraryPage = ({
                   </button>
                   <button className="icon-button" title="Download" aria-label={`Download ${material.title}`} onClick={() => onDownload(material)}>
                     <Download aria-hidden="true" />
+                  </button>
+                  <button className="icon-button danger" title="Delete" aria-label={`Delete ${material.title}`} onClick={() => onDelete(material)}>
+                    <Trash2 aria-hidden="true" />
                   </button>
                 </div>
               </td>

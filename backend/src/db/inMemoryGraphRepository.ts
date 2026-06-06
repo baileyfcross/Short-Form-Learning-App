@@ -63,6 +63,10 @@ export class InMemoryGraphRepository implements GraphRepository {
       tags: input.tags,
       objectKey: input.objectKey,
       sourceUrl: input.sourceUrl,
+      originalName: input.originalName,
+      fileHash: input.fileHash,
+      fileSize: input.fileSize,
+      contentType: input.contentType,
       isPublic: input.isPublic ?? false,
       processingStatus: "queued",
       uploadDate: new Date().toISOString(),
@@ -70,6 +74,14 @@ export class InMemoryGraphRepository implements GraphRepository {
     };
     this.materials.set(material.id, material);
     return this.stripReliability(material);
+  }
+
+  async findMaterialByOwnerAndFileHash(ownerId: string, fileHash: string) {
+    const material =
+      [...this.materials.values()]
+        .filter((candidate) => candidate.ownerId === ownerId && candidate.fileHash === fileHash)
+        .sort((a, b) => a.uploadDate.localeCompare(b.uploadDate))[0] ?? null;
+    return material ? this.stripReliability(material) : null;
   }
 
   async listMaterialsForUser(userId: string) {

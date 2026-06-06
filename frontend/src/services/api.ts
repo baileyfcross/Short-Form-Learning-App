@@ -54,6 +54,10 @@ export class ApiClient {
     return this.request<Material>(`/library/${materialId}`, { method: "PATCH", body: JSON.stringify(patch) });
   }
 
+  async deleteMaterial(materialId: string) {
+    return this.request<void>(`/library/${materialId}`, { method: "DELETE" });
+  }
+
   async inspectUpload(form: FormData) {
     return this.request<UploadInspection>("/library/inspect", { method: "POST", body: form, omitJsonHeader: true });
   }
