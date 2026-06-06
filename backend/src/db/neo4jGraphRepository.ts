@@ -76,7 +76,10 @@ export class Neo4jGraphRepository implements GraphRepository {
 
   async listMaterialsForUser(userId: string) {
     const result = await this.driver.executeQuery(
-      "MATCH (:User {id: $userId})-[:USER_UPLOADED_MATERIAL]->(m:Material) RETURN m ORDER BY m.uploadDate DESC",
+      `MATCH (:User {id: $userId})-[r:USER_UPLOADED_MATERIAL|USER_SAVED_MATERIAL]->(m:Material)
+       WHERE type(r) = 'USER_UPLOADED_MATERIAL' OR (m.isPublic = true AND m.moderationStatus = 'approved')
+       RETURN DISTINCT m
+       ORDER BY m.uploadDate DESC`,
       { userId }
     );
     return result.records.map((record) => this.stripReliability(this.node<Material & { reliabilityScore: number }>(record.get("m"))));
@@ -92,7 +95,9 @@ export class Neo4jGraphRepository implements GraphRepository {
       `MATCH (m:Material {id: $materialId})
        OPTIONAL MATCH (:User {id: $userId})-[:USER_UPLOADED_MATERIAL]->(m)
        WITH m, count(*) > 0 AS owns
-       WHERE $isAdmin OR owns
+       OPTIONAL MATCH (:User {id: $userId})-[:USER_SAVED_MATERIAL]->(m)
+       WITH m, owns, count(*) > 0 AS saved
+       WHERE $isAdmin OR owns OR (saved AND m.isPublic = true AND m.moderationStatus = 'approved')
        RETURN m LIMIT 1`,
       { materialId, userId, isAdmin }
     );
@@ -124,17 +129,49 @@ export class Neo4jGraphRepository implements GraphRepository {
   }
 
   async deleteMaterial(materialId: string, userId: string, isAdmin: boolean) {
+    const access = await this.driver.executeQuery(
+      `MATCH (m:Material {id: $materialId})
+       WITH m, m.ownerId = $userId AS owns
+       OPTIONAL MATCH (:User {id: $userId})-[saved:USER_SAVED_MATERIAL]->(m)
+       RETURN m.id AS id, owns, saved IS NOT NULL AS saved
+       LIMIT 1`,
+      { materialId, userId }
+    );
+    if (!access.records[0]) return false;
+
+    const owns = access.records[0].get("owns") as boolean;
+    const saved = access.records[0].get("saved") as boolean;
+    if (!isAdmin && !owns && saved) {
+      const result = await this.driver.executeQuery(
+        `MATCH (:User {id: $userId})-[saved:USER_SAVED_MATERIAL]->(:Material {id: $materialId})
+         DELETE saved
+         RETURN count(*) AS deleted`,
+        { materialId, userId }
+      );
+      return result.records[0].get("deleted").toNumber() > 0;
+    }
+    if (!isAdmin && !owns) return false;
+
+    await this.driver.executeQuery(
+      `MATCH (:Material {id: $materialId})-[:MATERIAL_GENERATED_SNIPPET]->(s:Snippet)
+       DETACH DELETE s`,
+      { materialId }
+    );
     const result = await this.driver.executeQuery(
       `MATCH (m:Material {id: $materialId})
-       OPTIONAL MATCH (:User {id: $userId})-[:USER_UPLOADED_MATERIAL]->(m)
-       WITH m, count(*) > 0 AS owns
-       WHERE $isAdmin OR owns
-       OPTIONAL MATCH (m)-[:MATERIAL_GENERATED_SNIPPET]->(s:Snippet)
-       DETACH DELETE s
-       WITH m
        DETACH DELETE m
        RETURN count(*) AS deleted`,
-      { materialId, userId, isAdmin }
+      { materialId }
+    );
+    return result.records[0].get("deleted").toNumber() > 0;
+  }
+
+  async removeSavedMaterialForUser(materialId: string, userId: string) {
+    const result = await this.driver.executeQuery(
+      `MATCH (:User {id: $userId})-[saved:USER_SAVED_MATERIAL]->(:Material {id: $materialId})
+       DELETE saved
+       RETURN count(*) AS deleted`,
+      { materialId, userId }
     );
     return result.records[0].get("deleted").toNumber() > 0;
   }
@@ -334,6 +371,19 @@ export class Neo4jGraphRepository implements GraphRepository {
        SET r.updatedAt = datetime()`,
       { userId, snippetId }
     );
+    if (event === "saved") {
+      await this.driver.executeQuery(
+        `MATCH (u:User {id: $userId}), (s:Snippet {id: $snippetId})
+         WHERE s.isPublic = true AND s.moderationStatus = 'approved'
+         OPTIONAL MATCH (relMaterial:Material)-[:MATERIAL_GENERATED_SNIPPET]->(s)
+         OPTIONAL MATCH (idMaterial:Material {id: s.sourceMaterialId})
+         WITH u, coalesce(relMaterial, idMaterial) AS m
+         WHERE m IS NOT NULL
+         MERGE (u)-[r:USER_SAVED_MATERIAL]->(m)
+         SET r.updatedAt = datetime()`,
+        { userId, snippetId }
+      );
+    }
     if (event === "reported") {
       await this.driver.executeQuery(
         `MATCH (u:User {id: $userId}), (s:Snippet {id: $snippetId})

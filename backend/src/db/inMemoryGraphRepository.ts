@@ -16,6 +16,7 @@ export class InMemoryGraphRepository implements GraphRepository {
   private materials = new Map<string, Material & { reliabilityScore: number }>();
   private snippets = new Map<string, SnippetAdminRecord>();
   private viewed = new Map<string, Set<string>>();
+  private savedMaterials = new Map<string, Set<string>>();
   private reports = new Map<string, { id: string; snippetId: string; reporterId: string; reason: string; status: string; createdAt: string }>();
 
   async close() {}
@@ -86,7 +87,13 @@ export class InMemoryGraphRepository implements GraphRepository {
   }
 
   async listMaterialsForUser(userId: string) {
-    return [...this.materials.values()].filter((material) => material.ownerId === userId).map((material) => this.stripReliability(material));
+    const savedMaterialIds = this.savedMaterials.get(userId) ?? new Set<string>();
+    return [...this.materials.values()]
+      .filter(
+        (material) =>
+          material.ownerId === userId || (savedMaterialIds.has(material.id) && material.isPublic && material.moderationStatus === "approved")
+      )
+      .map((material) => this.stripReliability(material));
   }
 
   async listAllMaterials() {
@@ -95,7 +102,9 @@ export class InMemoryGraphRepository implements GraphRepository {
 
   async getMaterialForUser(materialId: string, userId: string, isAdmin: boolean) {
     const material = this.materials.get(materialId);
-    if (!material || (!isAdmin && material.ownerId !== userId)) return null;
+    const isSaved = this.savedMaterials.get(userId)?.has(materialId) ?? false;
+    const canUseSavedAccess = isSaved && material?.isPublic && material.moderationStatus === "approved";
+    if (!material || (!isAdmin && material.ownerId !== userId && !canUseSavedAccess)) return null;
     return this.stripReliability(material);
   }
 
@@ -129,13 +138,23 @@ export class InMemoryGraphRepository implements GraphRepository {
 
   async deleteMaterial(materialId: string, userId: string, isAdmin: boolean) {
     const material = this.materials.get(materialId);
-    if (!material || (!isAdmin && material.ownerId !== userId)) return false;
+    if (!material) return false;
+    if (!isAdmin && material.ownerId !== userId) {
+      return false;
+    }
     for (const snippet of this.snippets.values()) {
       if (snippet.sourceMaterialId === materialId) {
         this.snippets.delete(snippet.id);
       }
     }
+    for (const saved of this.savedMaterials.values()) {
+      saved.delete(materialId);
+    }
     return this.materials.delete(materialId);
+  }
+
+  async removeSavedMaterialForUser(materialId: string, userId: string) {
+    return this.savedMaterials.get(userId)?.delete(materialId) ?? false;
   }
 
   async createSnippet(input: CreateSnippetInput) {
@@ -245,6 +264,14 @@ export class InMemoryGraphRepository implements GraphRepository {
       const set = this.viewed.get(userId) ?? new Set<string>();
       set.add(snippetId);
       this.viewed.set(userId, set);
+    }
+    if (event === "saved") {
+      const snippet = this.snippets.get(snippetId);
+      if (snippet?.sourceMaterialId && snippet.isPublic && snippet.moderationStatus === "approved") {
+        const saved = this.savedMaterials.get(userId) ?? new Set<string>();
+        saved.add(snippet.sourceMaterialId);
+        this.savedMaterials.set(userId, saved);
+      }
     }
     if (event === "reported") {
       const id = randomUUID();

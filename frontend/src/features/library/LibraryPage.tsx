@@ -8,12 +8,14 @@ const statusLabel = (material: Material) => {
 
 export const LibraryPage = ({
   materials,
+  currentUserId,
   onView,
   onDownload,
   onDelete,
   onVisibilityChange
 }: {
   materials: Material[];
+  currentUserId: string;
   onView: (material: Material) => void;
   onDownload: (material: Material) => void;
   onDelete: (material: Material) => void;
@@ -39,56 +41,68 @@ export const LibraryPage = ({
           </tr>
         </thead>
         <tbody>
-          {materials.map((material) => (
-            <tr key={material.id}>
-              <td>
-                <FileText aria-hidden="true" />
-                {material.title}
-              </td>
-              <td>{material.mediaType}</td>
-              <td>{material.subject}</td>
-              <td>{statusLabel(material)}</td>
-              <td>
-                <div className="visibility-control" aria-label={`Visibility for ${material.title}`}>
-                  <button
-                    className={!material.isPublic ? "active" : ""}
-                    type="button"
-                    title="Keep private"
-                    aria-label={`Keep ${material.title} private`}
-                    aria-pressed={!material.isPublic}
-                    onClick={() => onVisibilityChange(material, false)}
-                  >
-                    <Lock aria-hidden="true" />
-                    <span>Private</span>
-                  </button>
-                  <button
-                    className={material.isPublic ? "active" : ""}
-                    type="button"
-                    title="Request public review"
-                    aria-label={`Request public review for ${material.title}`}
-                    aria-pressed={material.isPublic}
-                    onClick={() => onVisibilityChange(material, true)}
-                  >
-                    <Globe2 aria-hidden="true" />
-                    <span>Public</span>
-                  </button>
-                </div>
-              </td>
-              <td>
-                <div className="table-actions">
-                  <button className="icon-button" title="View" aria-label={`View ${material.title}`} onClick={() => onView(material)}>
-                    <Eye aria-hidden="true" />
-                  </button>
-                  <button className="icon-button" title="Download" aria-label={`Download ${material.title}`} onClick={() => onDownload(material)}>
-                    <Download aria-hidden="true" />
-                  </button>
-                  <button className="icon-button danger" title="Delete" aria-label={`Delete ${material.title}`} onClick={() => onDelete(material)}>
-                    <Trash2 aria-hidden="true" />
-                  </button>
-                </div>
-              </td>
-            </tr>
-          ))}
+          {materials.map((material) => {
+            const isOwner = material.ownerId === currentUserId;
+            return (
+              <tr key={material.id}>
+                <td>
+                  <FileText aria-hidden="true" />
+                  {material.title}
+                </td>
+                <td>{material.mediaType}</td>
+                <td>{material.subject}</td>
+                <td>{statusLabel(material)}</td>
+                <td>
+                  {isOwner ? (
+                    <div className="visibility-control" aria-label={`Visibility for ${material.title}`}>
+                      <button
+                        className={!material.isPublic ? "active" : ""}
+                        type="button"
+                        title="Keep private"
+                        aria-label={`Keep ${material.title} private`}
+                        aria-pressed={!material.isPublic}
+                        onClick={() => onVisibilityChange(material, false)}
+                      >
+                        <Lock aria-hidden="true" />
+                        <span>Private</span>
+                      </button>
+                      <button
+                        className={material.isPublic ? "active" : ""}
+                        type="button"
+                        title="Request public review"
+                        aria-label={`Request public review for ${material.title}`}
+                        aria-pressed={material.isPublic}
+                        onClick={() => onVisibilityChange(material, true)}
+                      >
+                        <Globe2 aria-hidden="true" />
+                        <span>Public</span>
+                      </button>
+                    </div>
+                  ) : (
+                    <span>Saved public</span>
+                  )}
+                </td>
+                <td>
+                  <div className="table-actions">
+                    <button className="icon-button" title="View" aria-label={`View ${material.title}`} onClick={() => onView(material)}>
+                      <Eye aria-hidden="true" />
+                    </button>
+                    <button className="icon-button" title="Download" aria-label={`Download ${material.title}`} onClick={() => onDownload(material)}>
+                      <Download aria-hidden="true" />
+                    </button>
+                    <button
+                      className="icon-button danger"
+                      title={isOwner ? "Delete" : "Remove from library"}
+                      aria-label={`${isOwner ? "Delete" : "Remove"} ${material.title}`}
+                      onClick={() => onDelete(material)}
+                    >
+                      <Trash2 aria-hidden="true" />
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            );
+          })}
         </tbody>
       </table>
       {materials.length === 0 && <p className="empty-state">Your library is empty.</p>}

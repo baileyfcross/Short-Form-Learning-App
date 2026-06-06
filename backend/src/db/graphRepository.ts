@@ -22,6 +22,7 @@ export interface GraphRepository {
   getMaterialForUser(materialId: string, userId: string, isAdmin: boolean): Promise<Material | null>;
   patchMaterial(materialId: string, userId: string, patch: Partial<Material>): Promise<Material | null>;
   deleteMaterial(materialId: string, userId: string, isAdmin: boolean): Promise<boolean>;
+  removeSavedMaterialForUser(materialId: string, userId: string): Promise<boolean>;
   createSnippet(input: CreateSnippetInput): Promise<SnippetAdminRecord>;
   listFeed(options: FeedOptions): Promise<Snippet[]>;
   getPublicSnippet(snippetId: string): Promise<Snippet | null>;

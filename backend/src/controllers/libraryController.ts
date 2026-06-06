@@ -55,6 +55,6 @@ export const patchMaterial = asyncHandler(async (req, res) => {
 });
 
 export const deleteMaterial = asyncHandler(async (req, res) => {
-  await libraryService.remove(req.params.id, req.user!.id, isAdmin(req));
+  await libraryService.remove(req.params.id, req.user!.id);
   res.status(204).send();
 });

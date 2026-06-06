@@ -21,6 +21,7 @@
     "stop:dry-run": "node scripts/stop-local-servers.mjs --dry-run",
     "storage:clear": "node scripts/clear-local-storage.mjs",
     "storage:clear:dry-run": "node scripts/clear-local-storage.mjs --dry-run",
+    "health:backend": "node scripts/check-backend-health.mjs",
     "preview:frontend": "npm run preview --workspace frontend",
     "seed": "npm run seed --workspace backend",
     "build": "npm run build --workspaces",

@@ -110,9 +110,15 @@ export class LibraryService {
     return material;
   }
 
-  async remove(id: string, userId: string, isAdmin: boolean) {
-    const material = await this.get(id, userId, isAdmin);
-    const deleted = await graphRepository.deleteMaterial(id, userId, isAdmin);
+  async remove(id: string, userId: string) {
+    const material = await this.get(id, userId, false);
+    if (material.ownerId !== userId) {
+      const removed = await graphRepository.removeSavedMaterialForUser(id, userId);
+      if (!removed) throw notFound("Saved material");
+      return;
+    }
+
+    const deleted = await graphRepository.deleteMaterial(id, userId, false);
     if (!deleted) throw notFound("Material");
     await objectStorageService.deleteObject(material.objectKey);
   }

@@ -84,12 +84,16 @@ export const App = () => {
             window.setTimeout(() => URL.revokeObjectURL(url), 60_000);
           }}
           onLike={(id) => void api.like(id)}
-          onSave={(id) => void api.save(id)}
+          onSave={async (id) => {
+            await api.save(id);
+            await refreshLibrary();
+          }}
         />
       )}
       {view === "library" && (
         <LibraryPage
           materials={library}
+          currentUserId={session.user.id}
           onView={async (material) => {
             const url = await api.viewMaterial(material.id);
             window.open(url, "_blank", "noopener,noreferrer");
@@ -97,7 +101,9 @@ export const App = () => {
           }}
           onDownload={(material) => void api.downloadMaterial(material.id)}
           onDelete={async (material) => {
-            if (!window.confirm(`Delete "${material.title}" from your library?`)) return;
+            const isOwner = material.ownerId === session.user.id;
+            const message = isOwner ? `Delete "${material.title}" from your library?` : `Remove "${material.title}" from your library?`;
+            if (!window.confirm(message)) return;
             await api.deleteMaterial(material.id);
             await refreshLibrary();
             await refreshFeed();
